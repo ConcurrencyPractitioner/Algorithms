@@ -1,0 +1,159 @@
+package Graphs;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class UndirectedGraph {
+	public static void main(String[] args){
+		DataCenter a = new DataCenter(1);
+		DataCenter b = new DataCenter(2);
+		DataCenter c = new DataCenter(3);
+		UndirectedGraph graph = new UndirectedGraph();
+		graph.addDataCenter(a);
+		graph.addDataCenter(b);
+		graph.addDataCenter(c);
+		graph.addEdge(a, c);
+		graph.addEdge(b, c);
+		graph.addEdge(a, b);
+		System.out.println(graph.isFaultTolerant());
+		DataCenter d = new DataCenter(4);
+		graph.addDataCenter(d);
+		graph.addEdge(a,d);
+		System.out.println(graph.isFaultTolerant());
+		graph.addEdge(b, d);
+		System.out.println(graph.isFaultTolerant());
+	}
+	static List<DataCenter> dataCenters;
+	static List<Edge> edges;
+	public UndirectedGraph(){
+		dataCenters = new ArrayList<DataCenter>();
+		edges = new ArrayList<Edge>();
+	}
+	public void addDataCenter(DataCenter dc){
+		dataCenters.add(dc);
+	}
+	public void addEdge(DataCenter dc1, DataCenter dc2){
+		if(containsDataCenter(dc1) && containsDataCenter(dc2) && (!containsEdge(new Edge(dc1, dc2)))){
+			Edge edge = new Edge(dc1, dc2);
+			edges.add(edge);
+			dc1.addEdge(dc2);
+			dc2.addEdge(dc1);
+		}
+	}
+	public boolean containsDataCenter(DataCenter dc){
+		for(DataCenter dCenter : dataCenters){
+			if(dCenter.id == dc.id){
+				return true;
+			}
+		}
+		return false;
+	}
+	public boolean containsEdge(Edge e){
+		for(Edge edge: edges){
+			if(edge.dc1.id == e.dc1.id && edge.dc2.id == e.dc2.id){
+				return true;
+			}
+			if(edge.dc2.id == e.dc1.id && edge.dc1.id == e.dc2.id){
+				return true;
+			}
+		}
+		return false;
+	}
+	public void removeEdge(DataCenter dc1, DataCenter dc2){
+		if(containsDataCenter(dc1) && containsDataCenter(dc2)){
+			int index = 0;
+			for(Edge edge: edges){
+				if((edge.dc1.id == dc1.id && edge.dc2.id == dc2.id) || 
+						(edge.dc2.id == dc1.id && edge.dc1.id == dc2.id)){
+					Edge e = edges.remove(index);
+					e.dc1.removeEdge(dc2);
+					e.dc2.removeEdge(dc1);
+					break;
+				}
+				index++;
+			}
+		}
+	}
+	boolean isFaultTolerant(){
+		for(DataCenter dc1: dataCenters){
+			for(DataCenter dc2: dataCenters){
+				if(dc1.id == dc2.id) continue;
+				AtomicInteger count = new AtomicInteger(0);
+				LinkedList<DataCenter> linkedList = new LinkedList<DataCenter>();
+				linkedList.add(dc1);
+				countPaths(dc1, dc2, linkedList, count);
+				if(count.intValue() < 2){
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	void countPaths(DataCenter start, DataCenter end, LinkedList<DataCenter> linkedList, 
+			AtomicInteger count) {
+		ArrayList<DataCenter> adjacentDataCenters = start.adjacentDataCenters();
+		for(DataCenter dc: adjacentDataCenters){
+			if(linkedList.contains(dc)){
+				continue;
+			}
+			if(dc.id == end.id){
+				linkedList.add(dc);
+				int currentCount = count.incrementAndGet();
+				if(!(currentCount < 2)){
+					return;
+				}
+				linkedList.removeLast();
+			}
+		}
+		for(DataCenter dc: adjacentDataCenters){
+			if(linkedList.contains(dc) || dc.id == end.id){
+				continue;
+			}
+			linkedList.addLast(dc);
+			countPaths(dc,end,linkedList,count);
+			linkedList.removeLast();
+		}
+	}
+}
+class Edge{
+	DataCenter dc1;
+	DataCenter dc2;
+	public Edge(DataCenter dc1, DataCenter dc2){
+		this.dc1 = dc1;
+		this.dc2 = dc2;
+	}
+}
+class DataCenter{
+	List<Edge> connections;
+	int id;
+	public DataCenter(int id){
+		this.id = id;
+		connections = new ArrayList<Edge>();
+	}
+	public void addEdge(DataCenter dc){
+		Edge edge = new Edge(this, dc);
+		connections.add(edge);
+	}
+	public void removeEdge(DataCenter dc){
+		for(int i = 0; i < connections.size(); i++){
+			if((connections.get(i).dc1.id == this.id && connections.get(i).dc2.id == dc.id)||
+					(connections.get(i).dc1.id == dc.id && connections.get(i).dc2.id == this.id)){
+				connections.remove(i);
+				break;
+			}
+		}	
+	}
+	public ArrayList<DataCenter> adjacentDataCenters(){
+		ArrayList<DataCenter> result = new ArrayList<DataCenter>();
+		for(Edge e: connections){
+			if(e.dc1.id == this.id){
+				result.add(e.dc2);
+			}else{
+				result.add(e.dc1);
+			}
+		}
+		return result;
+	}
+}
