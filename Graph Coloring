@@ -1,0 +1,179 @@
+#include <iostream>
+#include <string>
+#include <map>
+#include <queue>
+#include <memory>
+ 
+using namespace std;
+ 
+template <class V>
+class Vertex{
+    public:
+        int id;
+        V value;
+        //Using STL, shared pointers are required
+        map<int,shared_ptr<Vertex<V>>> adjacentVertices;
+ 
+        Vertex(int i, V v):id(i),value(v),
+            adjacentVertices(map<int,shared_ptr<Vertex<V>>>()){}
+        Vertex(const Vertex& vertex):id(vertex.id),value(vertex.value),
+            adjacentVertices(vertex.adjacentVertices){}
+        
+        //Adds a vertex, updates node if id already exists.
+        void addVertex(int i, V v){
+            shared_ptr<Vertex<V>> adjacent = std::make_shared<Vertex<V>>(i,v);
+            adjacentVertices.emplace(i,adjacent);
+        }
+        //Adds a smart pointer, accessed via integer Id
+        void addVertex(shared_ptr<Vertex<V>> (&v)){
+            adjacentVertices.emplace(v -> id, v);
+        }
+        //Since Map uses stl, this is neccesary
+        friend bool operator < (const shared_ptr<Vertex<V>> (&v1),
+                const shared_ptr<Vertex<V>> (&v2)) {
+            return v1 -> id < v2 -> id;
+        }
+        //Gets an adjacent node based on node Id
+        shared_ptr<Vertex<V>> getAdjacent(int i){
+            if(adjacentVertices.find(i) ==
+                adjacentVertices.end()) return std::make_shared<Vertex<V>>(0,V());
+            return adjacentVertices.find(i) -> second;
+        }
+};
+template <class V>
+//Used to store a collection of vertices
+class Graph{
+    public:
+        map<int,shared_ptr<Vertex<V>>> Vertices;
+        Graph():Vertices(map<int,shared_ptr<Vertex<V>>>()){}
+        //Adds a node 
+        void addVertex(int newId, int newV){
+            shared_ptr<Vertex<V>> vert = std::make_shared<Vertex<V>>(newId, newV);
+            Vertices.emplace(newId, vert);
+        }
+        //Forms the equivalent of an edge between two vertices
+        void connectVertices(int id1, int id2){
+            if(Vertices.find(id1) == Vertices.end() || Vertices.find(id2) == Vertices.end()) return;
+            (Vertices.find(id1) -> second) -> addVertex(Vertices.find(id2) -> second);
+            (Vertices.find(id2) -> second) -> addVertex(Vertices.find(id1) -> second);
+        }
+        //Returns a vertex stored in the graph 
+        shared_ptr<Vertex<V>> getVertex(int id){
+            if(Vertices.find(id) == Vertices.end()) return std::make_shared<Vertex<V>>(0,V());
+            return Vertices.find(id) -> second;
+        }
+};
+/*START of main algorithm
+Problem: Vertex Coloring: Assign a color to each vertex in a graph such that
+no two vertices which share a common edge are the same color. The number of 
+different colors could not exceed the maximum degree ever contained by a 
+vertex in the graph.
+Algorith: Uses BFS to sort through the graph layer by layer.
+Color is assigned to a vertex based on color assignments to neighboring vertices
+(that is vertices that share a common edge)
+*/
+class MapHelper{
+    //As a limiter to the degree for which a color is assigned
+    static int maxDegree;
+    static int size;
+    public:
+        //Helper method, acts as a buffer to main segment of the code
+        template <class V>
+        static void fillMapMain(map<shared_ptr<Vertex<V>>, int> (&result),
+                    Graph<V> g, shared_ptr<Vertex<V>> vert, int max){
+            maxDegree = max;
+            size = g.Vertices.size();
+            //Queue that will be used for BFS AKA Breadth First Search
+            queue<shared_ptr<Vertex<V>>> adjacentVerticesQueue = queue<shared_ptr<Vertex<V>>> ();
+            for(auto it = vert->adjacentVertices.begin(); it != vert->adjacentVertices.end(); it++){
+                adjacentVerticesQueue.push(it->second);
+            }
+            result.emplace(vert, 1);
+            MapHelper::fillMap<V>(result,adjacentVerticesQueue);
+        }
+        //BFS Recursive Method
+        template <class V>
+        static void fillMap(map<shared_ptr<Vertex<V>>, int> (&result),
+                queue<shared_ptr<Vertex<V>>> (&adjacentVerticesQueue)){
+            int i = 0;
+            //Map is used to keep track of colors used by available colors
+            //and the one that were not used.
+            map<int,int> availableColors;
+            for(int i = 1; i <= maxDegree; i++) availableColors.emplace(i,i);
+            //Iterates through each vertex, assigns colors based upon color availability
+            for(int i = 0; i < adjacentVerticesQueue.size(); i++){
+                shared_ptr<Vertex<V>> curr = adjacentVerticesQueue.front();
+                for(auto it = curr->adjacentVertices.begin(); it != curr->adjacentVertices.end(); it++){
+                    if(result.find(it->second) != result.end()){
+                        availableColors.erase(result.find(it->second) -> second);
+                    }
+                }
+                result.emplace(curr, availableColors.begin() -> first);
+                adjacentVerticesQueue.pop();
+                adjacentVerticesQueue.push(curr);
+            }
+            //Adds new adjacent Vertices for search
+            queue<shared_ptr<Vertex<V>>> newVerticesQueue;
+            while(!adjacentVerticesQueue.empty()){
+                shared_ptr<Vertex<V>> curr = adjacentVerticesQueue.front();
+                for(auto it = curr->adjacentVertices.begin(); it != curr->adjacentVertices.end(); it++){
+                    if(result.find(it->second) == result.end()){
+                        newVerticesQueue.push(it->second);
+                    }
+                }
+                adjacentVerticesQueue.pop();
+            }
+            //Boundary condition, if it is met, then work is done.
+            if(result.size() == size) return;
+            MapHelper::fillMap<V>(result, newVerticesQueue);
+        }
+};
+ 
+int MapHelper::maxDegree;
+int MapHelper::size;
+ 
+template <class V>
+map<shared_ptr<Vertex<V>>, int> findColoring(Graph<V> g){
+    //Finds maxDegreeVertex, is pivatol due to problem parameters
+    shared_ptr<Vertex<V>> maxDegreeVertex = std::make_shared<Vertex<V>>(0,0);
+    for(auto it = g.Vertices.begin(); it != g.Vertices.end(); it++){
+        maxDegreeVertex = (it -> second)->adjacentVertices.size() > maxDegreeVertex->adjacentVertices.size() ?
+            (it->second): maxDegreeVertex;
+    }
+    //Future result
+    map<shared_ptr<Vertex<V>>, int> result;
+    MapHelper::fillMapMain<V>(result, g, maxDegreeVertex, maxDegreeVertex->adjacentVertices.size() + 1);
+    return result;
+}
+//Test
+int main(){
+    Graph<int> g = Graph<int>();
+    g.addVertex(1,3);
+    g.addVertex(3,6);
+    g.addVertex(4,8);
+    g.addVertex(5,10);
+    g.addVertex(6,15);
+    g.addVertex(7,21);
+    g.addVertex(2,4);
+    g.addVertex(8,312);
+    g.connectVertices(1,2);
+    g.connectVertices(1,3);
+    g.connectVertices(2,3);
+    g.connectVertices(2,4);
+    g.connectVertices(3,4);
+    g.connectVertices(4,8);
+    g.connectVertices(3,5);
+    g.connectVertices(2,5);
+    g.connectVertices(3,6);
+    g.connectVertices(6,7);
+    g.connectVertices(7,8);
+    g.connectVertices(4,6);
+    g.connectVertices(4,7);
+    g.connectVertices(4,8);
+    g.connectVertices(4,1);
+    g.connectVertices(4,5);
+    map<shared_ptr<Vertex<int>>, int> coloring = findColoring<int>(g);
+    for(auto it = coloring.begin(); it != coloring.end(); it++){
+        cout << (it -> first)->id << " " << it->second << endl;
+    }
+}
