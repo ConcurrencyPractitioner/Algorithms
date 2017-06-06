@@ -1,0 +1,87 @@
+/*Standard solution to solve the following problem
+Given a larger string and a vector of smaller strings, return the given indexes
+of the smaller strings within the larger string. Return -1 if no such string exists
+within the larger string.*/
+
+#include <string>
+#include <map>
+#include <memory>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+class TrieNode{
+    public:
+        char character;
+        int position;
+        map<char,shared_ptr<TrieNode>> children;
+        TrieNode(char c, int index):character(c), position(index),
+        		children(map<char,shared_ptr<TrieNode>>()){
+        }
+        void addString(std::string str, int startingIndex){
+            shared_ptr<TrieNode> curr = nullptr;
+            shared_ptr<TrieNode> next = this -> getChild(str.at(0));
+            if(next == nullptr){
+                shared_ptr<TrieNode> child = std::make_shared<TrieNode>(str.at(0), startingIndex);
+                children.emplace(str.at(0), child);
+            }
+            curr = this -> getChild(str.at(0));
+            for(unsigned int i = 1; i < str.size(); i++){
+                next = curr -> getChild(str.at(i));
+                if(next == nullptr){
+                    shared_ptr<TrieNode> child = std::make_shared<TrieNode>(str.at(i),
+                    		startingIndex + i);
+                    curr -> children.emplace(str.at(i), child);
+                }
+                curr = curr -> getChild(str.at(i));
+            }
+        }
+        shared_ptr<TrieNode> getChild(char c){
+            if(children.find(c) == children.end()) return nullptr;
+            return children.at(c);
+        }
+};
+class Trie{
+	public:
+		TrieNode root;
+		Trie():root(TrieNode(' ', 0)){}
+		void addString(std::string str){
+			for(int i = 0; i < str.size();i++){
+				root.addString(str.substr(i), i);
+			}
+		}
+		bool containsString(std::string str){
+			shared_ptr<TrieNode> curr = root.getChild(str.at(0));
+			for(int i = 1; i < str.size(); i++){
+				if(curr == nullptr) return false;
+				curr = curr -> getChild(str.at(i));
+			}
+			if(curr == nullptr) return false;
+			return true;
+		}
+};
+map<string, int> findPositions(string bigStr, vector<string> smallerStrs){
+	Trie t = Trie();
+	t.addString(bigStr);
+	map<string, int> result;
+	for(string str: smallerStrs){
+		shared_ptr<TrieNode> curr = t.root.getChild(str.at(0));
+		for(int i = 1; i < str.size(); i++){
+			if(curr == nullptr) break;
+			curr = curr -> getChild(str.at(i));
+		}
+		if(curr != nullptr) result.emplace(str, curr -> position - str.size() + 1);
+		else result.emplace(str, -1);
+	}
+	return result;
+}
+//Test
+int main(){
+    vector<string> smallerStrs = {"Bob", "is", "great"};
+    string bigStr = "Bobisgreat";
+    map<string, int> result = findPositions(bigStr, smallerStrs);
+    for(auto it = result.begin(); it != result.end(); it++){
+    	cout << it->first << " " << it->second << endl;
+    }
+}
