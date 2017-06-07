@@ -9,6 +9,9 @@
 
 using namespace std;
 
+//One could envision a series of fields as a board of 
+//vertices, horizontally, vertically linked.
+//Each BoardNode represents a field.
 class BoardNode{
 	public:
 		shared_ptr<BoardNode> left;
@@ -19,6 +22,7 @@ class BoardNode{
 		BoardNode():left(nullptr), right(nullptr),
 				up(nullptr), down(nullptr), visited(false){}
 };
+//Board, represents a square array of BoardNodes
 template <int n>
 class Board{
 	public:
@@ -46,6 +50,9 @@ class Board{
 		bool conditions(int r, int c){
 			return r >= 0 && r < n && c >= 0 && c < n;
 		}
+		//When a road is established to be between 
+		//fields connections[w][x]  && connections[y][z]
+		//we remove the link between them.
 		void removeConnections(int w, int x, int y, int z){
 			if(y == w + 1){
 				connections[w][x] -> down = nullptr;
@@ -60,6 +67,12 @@ class Board{
 };
 class CowCross{
 public:
+	//Group methods
+	//Is used to determine which cow belongs to which field
+	//Any two fields that are linked to each other, directly or passing through the links
+	//of other fields, are given the same color.
+	//If two cows are in two fields, but have different colors.
+	//That means the two respective cows is a "distant pair"
 	template <int n>
 	void gatherGroup(Board<n> (&board), map<int,int> (&result), int r, int c, int color){
 		if((!board.conditions(r,c)) || board.connections[r][c] -> visited) return;
@@ -70,6 +83,7 @@ public:
 		if(board.connections[r][c] -> right != nullptr) gatherGroup(board, result, r, c+1, color);
 		if(board.connections[r][c] -> left != nullptr) gatherGroup(board, result, r, c-1, color);
 	}
+	//Helps determine the color (represented by int) of each field on the board
 	template <int n>
 	map<int, int> compileGroups(Board<n> (&board)){
 		map<int, int> result;
@@ -84,18 +98,23 @@ public:
 		}
 		return result;
 	}
+	//Determines if two cows is a pair
 	template <int n>
 	bool isPair(int r1, int c1, int r2, int c2, map<int, int> groups){
 		if(groups.at(r1 * n + c1) != groups.at(r2 * n + c2)) return true;
 		return false;
 	}
+	//Main method
 	template <int n, int k, int r>
 	int countDistantPairs(int (&array)[r][4], int (&cowLocs)[k][2]){
 		Board<n> board = Board<n>();
+		//array represents the roads, uses the info given
+		//to remove links between fields
 		for(int i = 0; i < r; i++){
 			board.removeConnections(array[i][0]-1, array[i][1]-1,
 					array[i][2]-1, array[i][3]-1);
 		}
+		//Calculate whether a pair of cows are considered "distant"
 		map<int, int> groups = compileGroups<n>(board);
 		int pairs = 0;
 		for(int i1 = 0; i1 < k; i1++){
@@ -109,6 +128,7 @@ public:
 		return pairs;
 	}
 };
+//Test
 int main(){
 	int array[3][4] = {
 		{2,2,2,3},
