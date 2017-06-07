@@ -1,0 +1,125 @@
+//Solution for the following problem stored in link:
+//http://www.usaco.org/current/index.php?page=viewproblem2&cpid=716
+
+#include <vector>
+#include <string>
+#include <map>
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class BoardNode{
+	public:
+		shared_ptr<BoardNode> left;
+		shared_ptr<BoardNode> right;
+		shared_ptr<BoardNode> up;
+		shared_ptr<BoardNode> down;
+		bool visited;
+		BoardNode():left(nullptr), right(nullptr),
+				up(nullptr), down(nullptr), visited(false){}
+};
+template <int n>
+class Board{
+	public:
+		int size = n;
+		shared_ptr<BoardNode> connections[n][n];
+		Board(){
+			for(int r = 0; r < n; r++){
+				for(int c = 0; c < n; c++){
+					connections[r][c] = std::make_shared<BoardNode>();
+				}
+			}
+			for(int r = 0; r < n; r++){
+				for(int c = 0; c < n; c++){
+					connections[r][c] -> left = conditions(r,c-1) ? connections[r][c-1]:
+							nullptr;
+					connections[r][c] -> right = conditions(r, c+1) ? connections[r][c+1]:
+							nullptr;
+					connections[r][c] -> up = conditions(r-1, c) ? connections[r-1][c]:
+							nullptr;
+					connections[r][c] -> down = conditions(r+1, c) ? connections[r+1][c]:
+							nullptr;
+				}
+			}
+		}
+		bool conditions(int r, int c){
+			return r >= 0 && r < n && c >= 0 && c < n;
+		}
+		void removeConnections(int w, int x, int y, int z){
+			if(y == w + 1){
+				connections[w][x] -> down = nullptr;
+				connections[y][z] -> up = nullptr;
+			}else if(z == x + 1){
+				connections[w][x] -> right = nullptr;
+				connections[y][z] -> left = nullptr;
+			}else{
+				removeConnections(y,z,w,x);
+			}
+		}
+};
+class CowCross{
+public:
+	template <int n>
+	void gatherGroup(Board<n> (&board), map<int,int> (&result), int r, int c, int color){
+		if((!board.conditions(r,c)) || board.connections[r][c] -> visited) return;
+		board.connections[r][c] -> visited = true;
+		result.emplace(r * n + c, color);
+		if(board.connections[r][c] -> down != nullptr) gatherGroup(board, result, r+1, c, color);
+		if(board.connections[r][c] -> up != nullptr) gatherGroup(board, result, r-1, c, color);
+		if(board.connections[r][c] -> right != nullptr) gatherGroup(board, result, r, c+1, color);
+		if(board.connections[r][c] -> left != nullptr) gatherGroup(board, result, r, c-1, color);
+	}
+	template <int n>
+	map<int, int> compileGroups(Board<n> (&board)){
+		map<int, int> result;
+		int color = 0;
+		for(int r = 0; r < n; r++){
+			for(int c = 0; c < n; c++){
+				if(!board.connections[r][c] -> visited){
+					this -> gatherGroup<n>(board, result, r, c, color);
+					color++;
+				}
+			}
+		}
+		return result;
+	}
+	template <int n>
+	bool isPair(int r1, int c1, int r2, int c2, map<int, int> groups){
+		if(groups.at(r1 * n + c1) != groups.at(r2 * n + c2)) return true;
+		return false;
+	}
+	template <int n, int k, int r>
+	int countDistantPairs(int (&array)[r][4], int (&cowLocs)[k][2]){
+		Board<n> board = Board<n>();
+		for(int i = 0; i < r; i++){
+			board.removeConnections(array[i][0]-1, array[i][1]-1,
+					array[i][2]-1, array[i][3]-1);
+		}
+		map<int, int> groups = compileGroups<n>(board);
+		int pairs = 0;
+		for(int i1 = 0; i1 < k; i1++){
+			for(int i2 = i1 + 1; i2 < k; i2++){
+				if(isPair<n>(cowLocs[i1][0]-1, cowLocs[i1][1]-1,
+						cowLocs[i2][0]-1, cowLocs[i2][1]-1, groups)){
+					pairs++;
+				}
+			}
+		}
+		return pairs;
+	}
+};
+int main(){
+	int array[3][4] = {
+		{2,2,2,3},
+		{3,3,3,2},
+		{3,3,2,3}
+	};
+	int cows[3][2] = {
+		{3,3},
+		{2,2},
+		{2,3}
+	};
+	CowCross cross;
+	cout << cross.countDistantPairs<3,3,3>(array, cows) << endl;
+}
