@@ -71,6 +71,8 @@ public:
 	//Is used to determine which cow belongs to which field
 	//Any two fields that are linked to each other, directly or passing through the links
 	//of other fields, are given the same color.
+	//Meaning a cows is able to get to another field of the same color
+	//without crossing a road
 	//If two cows are in two fields, but have different colors.
 	//That means the two respective cows is a "distant pair"
 	template <int n>
