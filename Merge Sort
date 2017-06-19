@@ -1,56 +1,72 @@
 package RandomizedSelect;
-
+ 
 import java.util.LinkedList;
-
+import java.util.Random;
+ 
 public class ParallelMergeSort {
-	static void mergeSort(int[] A){
-		try {
-			mergeSort(A, 0, A.length-1);
-		} catch (InterruptedException e) {
-		}
-	}
-	//Basis of mergeSort recursive method
-	//Uses parallelism to accelerate time.
-	static void mergeSort(int[] A, int low, int high) throws InterruptedException{
-		if(high - low < 1){
-			return;
-		}
-		int pivot = Math.floorDiv(high + low, 2);
-		Thread proc = new Thread(new Runnable(){
-			@Override
-			public void run(){
-				try {
-					mergeSort(A, low, pivot);
-					mergeSort(A, pivot + 1, high);
-				} catch (InterruptedException e) {
-				}
-			}
-		});
-		proc.start();
-		while(proc.isAlive()) Thread.sleep(0);;
-		merge(A, low, pivot, pivot+1, high);
-
-	}
-	//Merges two sorted arrays a[l1...r1] and a[l2...r2] together into one sorted array
-	static void merge(int[] a, int l1, int r1, int l2, int r2) {
-		LinkedList<Integer> list = new LinkedList<Integer>();
-		for(int i = l1; i <= r1; i++){
-			list.add(a[i]);
-		}
-		int index = 0;
-		for(int i = l2; i <= r2; i++){
-			while(index < list.size() && list.get(index) < a[i]) index++;
-			list.add(index, a[i]);
-		}
-		for(int i = 0; i < list.size(); i++){
-			a[i + l1] = list.get(i);
-		}
-	}
-	public static void main(String[] args){
-		int[] array = {1,5,12,15,12,11,3, 16, 2, 5, 18};
-		mergeSort(array);
-		for(int i: array){
-			System.out.print(i + " ");
-		}
-	}
+    static void mergeSort(int[] A){
+        try {
+            mergeSort(A, 0, A.length-1);
+        } catch (InterruptedException e) {
+        }
+    }
+    //Basis of mergeSort recursive method
+    //Uses parallelism to accelerate time.
+    static void mergeSort(int[] A, int low, int high) throws InterruptedException{
+        if(high - low < 1){
+            return;
+        }
+        int pivot = Math.floorDiv(high + low, 2);
+        Thread proc = new Thread(new Runnable(){
+            @Override
+            public void run(){
+                try {
+                    mergeSort(A, low, pivot);
+                    mergeSort(A, pivot + 1, high);
+                } catch (InterruptedException e) {
+                }
+            }
+        });
+        proc.start();
+        while(proc.isAlive()) Thread.sleep(0);;
+        merge(A, low, pivot, pivot+1, high);
+ 
+    }
+    //Merges two sorted arrays a[l1...r1] and a[l2...r2] together into one sorted array
+    static void merge(int[] a, int l1, int r1, int l2, int r2) {
+        LinkedList<Integer> list = new LinkedList<Integer>();
+        for(int i = l1; i <= r1; i++){
+            list.add(a[i]);
+        }
+        int index = 0;
+        for(int i = l2; i <= r2; i++){
+            while(index < list.size() && list.get(index) < a[i]) index++;
+            list.add(index, a[i]);
+        }
+        for(int i = 0; i < list.size(); i++){
+            a[i + l1] = list.get(i);
+        }
+    }
+    static boolean isSorted(int[] arr){
+        for(int i = 0; i < arr.length - 1; i++){
+            if(!(arr[i] <= arr[i+1])) return false;
+        }
+        return true;
+    }
+    static void checkSort(int[] arraySizes) {
+        Random rand = new Random();
+        for(int i = 0; i < arraySizes.length; i++){
+            int[] array = new int[arraySizes[i]];
+            for(int r = 0; r < array.length; r++){
+                array[r] = rand.nextInt(Integer.MAX_VALUE);
+            }
+            mergeSort(array);
+            if(isSorted(array)) System.out.println("Sorted " + array.length + " elements");
+            else System.out.println("Error when sorting" + array.length + "elements");
+        }
+    }
+    public static void main(String[] args){
+        int[] arraySizes = {100,1000, 10000, 17000};
+        checkSort(arraySizes);
+    }
 }
