@@ -1,0 +1,144 @@
+package GhostBusters;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+
+
+public class GhostBusters{
+	public static void main(String[] args){
+		Ghost g = new Ghost(1,1);
+		Ghost g2 = new Ghost(13,14);
+		Ghost g3 = new Ghost(6,8);
+		GhostBuster gb1 = new GhostBuster(13, -1);
+		GhostBuster gb2 = new GhostBuster(4, 16);
+		GhostBuster gb3 = new GhostBuster(12, -1);
+		LinkedList<Ghost> list2 = new LinkedList<Ghost>();
+		list2.add(g);
+		list2.add(g2);
+		list2.add(g3);
+		LinkedList<GhostBuster> list1 = new LinkedList<GhostBuster>();
+		list1.add(gb1);
+		list1.add(gb2);
+		list1.add(gb3);
+		HashMap<GhostBuster, Ghost> result = pairOff(list1, list2);
+		for(GhostBuster gb: result.keySet()){
+			System.out.println("Ghostbuster at (" + gb.x + "," + gb.y
+					+ ") is matched with Ghost at (" + result.get(gb).x + 
+					"," + result.get(gb).y + ")");
+		}
+	}
+	static HashMap<GhostBuster, Ghost> pairOff(LinkedList<GhostBuster> list1,
+			LinkedList<Ghost> list2){
+		HashMap<GhostBuster, Ghost> result = new HashMap<GhostBuster, Ghost>();
+		Collections.sort(list1);
+		Collections.sort(list2);
+		LinkedList<Coordinates> list1Coord = new LinkedList<>();
+		for(int i = 0; i < list1.size(); i++) list1Coord.add(list1.get(i));
+		LinkedList<Coordinates> list2Coord = new LinkedList<>();
+		for(int i = 0; i < list2.size(); i++){
+			list2Coord.add(list2.get(i));
+		}
+		for(int i = 0; i < list1.size(); i++){
+			int partner = 0;
+			if(list1Coord.get(0).x <= list2Coord.get(0).x){
+				Coordinates gb = list1Coord.get(0);
+				partner = determinePair(gb, list2Coord, list1Coord);
+				if(partner == -1) break;
+				result.put((GhostBuster)list1Coord.get(0), (Ghost)list2Coord.get(partner));
+				list1Coord.remove(0);
+				list2Coord.remove(partner);
+			}else{
+				Coordinates g = list2Coord.get(0);
+				partner = determinePair(g, list1Coord, list2Coord);
+				if(partner == -1) break;
+				result.put((GhostBuster)list1Coord.get(partner), (Ghost)list2Coord.get(0));
+				list1Coord.remove(partner);
+				list2Coord.remove(0);
+			}
+		}
+		return result;
+	}
+	static int determinePair(Coordinates g, LinkedList<Coordinates> list1, 
+			LinkedList<Coordinates> list2) {
+		LinkedList<Pair> list1Pairs = new LinkedList<Pair>();
+		LinkedList<Pair> list2Pairs = new LinkedList<Pair>();
+		for(int i = 0; i < list1.size(); i++){
+			list1Pairs.add(new Pair(i, list1.get(i).x - g.x, list1.get(i).y - g.y));
+			list2Pairs.add(new Pair(i, list2.get(i).x - g.x, list2.get(i).y - g.y));
+		}
+		Collections.sort(list1Pairs);
+		Collections.sort(list2Pairs);
+		int low = 0;
+		int high = list1.size() - 1;
+		while(low <= high){
+			int mid = (low + high)/2;
+			int aboveGhostBusters = 0;
+			int lowerGhostBusters = 0;
+			int aboveGhosts = 0;
+			int lowerGhosts = 0;
+			double slope = list1Pairs.get(mid).slope;
+			for(int i = 0; i < list1Pairs.size(); i++){
+				if(i == mid) continue;
+				if(list1Pairs.get(i).slope > slope){
+					aboveGhostBusters++;
+				}else{
+					lowerGhostBusters++;
+				}
+			}
+			for(int i = 0; i < list2Pairs.size(); i++){
+				if(list2Pairs.get(i).index == list2.indexOf(g)) continue;
+				if(list2Pairs.get(i).slope > slope){
+					aboveGhosts++;
+				}else{
+					lowerGhosts++;
+				}
+			}
+			if(aboveGhosts == aboveGhostBusters && 
+					lowerGhosts == lowerGhostBusters){
+				return list1Pairs.get(mid).index;
+			}else if(aboveGhosts - aboveGhostBusters <  0){
+				low = mid + 1;
+			}else{
+				high = mid - 1;
+			}
+		}
+		return -1;
+	}
+	static class Pair implements Comparable<Pair>{
+		int index;
+		double slope;
+		public Pair(int index, int xDist, int yDist){
+			this.index = index;
+			if(xDist == 0) this.slope = Double.MAX_VALUE;
+			else this.slope = (((double)yDist)/((double)xDist));
+		}
+		@Override
+		public int compareTo(Pair o) {
+			return Double.compare(slope, o.slope);
+		}
+	}
+	static class GhostBuster extends Coordinates{
+		public GhostBuster(int x, int y) {
+			super(x, y);
+		}
+	}
+	static class Ghost extends Coordinates{
+		public Ghost(int x, int y) {
+			super(x, y);
+		}
+		
+	}
+	static class Coordinates implements Comparable<Coordinates>{
+		int x;
+		int y;
+		public Coordinates(int x, int y){
+			this.x = x;
+			this.y = y;
+		}
+		@Override
+		public int compareTo(Coordinates o){
+			return x == o.x ? Integer.compare(y, o.y) : Integer.compare(x, o.x);
+		}
+	}
+}
