@@ -1,13 +1,27 @@
+/* Introduction to ALGORITHMS by Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest
+ * and Clifford Stein Third Edition page 1045
+ * 33-3 Ghost Busters and ghosts. A group of n Ghostbusters is battling n ghosts. 
+ * Each GhostBuster carries a proton pack, which shoots a stream at a ghost, eradicating it. 
+ * A stream goes in a straight line, terminating when hitting the ghost. 
+ * The Ghostbusters decide upon the following strategy. 
+ * They will pair off with the ghosts, forming n Ghostbuster-ghost pairs, 
+ * and then simultaneously each Ghostbuster will shoot a stream at his or her chosen ghost.
+ * As we all know, it is very dangerous to let streams cross, 
+ * and so the Ghostbusters must choose pairings for which no streams will cross. 
+ * Assume that the position of each Ghostbuster and each ghost is in a fixed point in the plane, 
+ * and no three positions are collinear. Write an algorithm to pair them up in O(n^2 log n time).
+ */
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 
 public class GhostBusters{
+	//Test
 	public static void main(String[] args){
 		Ghost g = new Ghost(1,1);
 		Ghost g2 = new Ghost(13,14);
 		Ghost g3 = new Ghost(6,8);
-		GhostBuster gb1 = new GhostBuster(13, -1);
+		GhostBuster gb1 = new GhostBuster(15, 16);
 		GhostBuster gb2 = new GhostBuster(4, 16);
 		GhostBuster gb3 = new GhostBuster(12, -1);
 		LinkedList<Ghost> list2 = new LinkedList<Ghost>();
@@ -18,17 +32,29 @@ public class GhostBusters{
 		list1.add(gb1);
 		list1.add(gb2);
 		list1.add(gb3);
-		Collections.sort(list1);
-		Collections.sort(list2);
-		//list1 and list2 has to be sorted
-		HashMap<GhostBuster, Ghost> result = pairOff(list1, list2);
+		HashMap<GhostBuster, Ghost> result = GhostBusters.initPairOff(list1, list2);
 		for(GhostBuster gb: result.keySet()){
 			System.out.println("Ghostbuster at (" + gb.x + "," + gb.y
 					+ ") is matched with Ghost at (" + result.get(gb).x + 
 					"," + result.get(gb).y + ")");
 		}
 	}
-	//Requirement: list1 and list2 will have to be sorted
+	//Used to initialize pairOff() method
+	static HashMap<GhostBuster, Ghost> initPairOff(LinkedList<GhostBuster> list1,
+			LinkedList<Ghost> list2){
+		if(list1.size() != list2.size()) return null;
+		Collections.sort(list1);
+		Collections.sort(list2);
+		return pairOff(list1, list2);
+	}
+	/*recursive pairOff() method: does the heavy lifting
+	*Base case: if list1.size() == 1, return;
+	*else:
+	*once pair is established
+	*We sort GhostBusters and Ghosts into two categories: above and below the line
+	*formed between the leftMost GhostBuster or Ghost and its chosen target
+	*Then we run pairOff() on the respective Categories.
+	*/
 	static HashMap<GhostBuster, Ghost> pairOff(LinkedList<GhostBuster> list1,
 			LinkedList<Ghost> list2){
 		HashMap<GhostBuster, Ghost> result = new HashMap<GhostBuster, Ghost>();
@@ -43,8 +69,15 @@ public class GhostBusters{
 		int partner = 0;
 		double slope = 0.0;
 		Coordinates g;
+		//Determining which Ghostbuster or Ghost is the leftMost(determined by x-coordinate)
+		//Calls determinePair() to find suitableMatch
 		if(list1Coord.get(0).x <= list2Coord.get(0).x){
 			g = list1Coord.get(0);
+			/*Partner is the position of the GhostBuster or Ghost which satisfies
+			the following conditions:
+			1. The number of ghostBusters and ghosts are the same above the line.
+			2. The number of ghostBusters and ghosts are the same below the line.
+			*/
 			partner = determinePair(g, list2Coord, list1Coord);
 			if(partner != -1){
 				result.put((GhostBuster)list1Coord.get(0), (Ghost)list2Coord.get(partner));
@@ -66,6 +99,8 @@ public class GhostBusters{
 				list2Coord.remove(0);
 			}
 		}
+		//Recurse phase: determining above and lower categories
+		//Determined by slope
 		LinkedList<GhostBuster> aboveGBs = new LinkedList<>();
 		LinkedList<GhostBuster> lowerGBs = new LinkedList<>();
 		LinkedList<Ghost> aboveGs = new LinkedList<>();
@@ -84,6 +119,8 @@ public class GhostBusters{
 			if(currSlope > slope) aboveGs.add((Ghost) list2Coord.get(i));
 			else lowerGs.add((Ghost) list2Coord.get(i));
 		}
+		//Recurse: if(size == 0) Do nothing
+		//Else continue
 		if(aboveGBs.size() != 0){
 			result.putAll(pairOff(aboveGBs, aboveGs));
 		}else if(lowerGBs.size() != 0){
@@ -91,20 +128,30 @@ public class GhostBusters{
 		}
 		return result;
 	}
+	/*O(n log n) time, Will only work if g is the leftMost 
+	 * point among both list1 & list2
+	 * Is essentially a binary search.
+	 * We use slope to determine whether a point is above 
+	 * or below the line.
+	 */
 	static int determinePair(Coordinates g, LinkedList<Coordinates> list1, 
 			LinkedList<Coordinates> list2) {
 		LinkedList<Pair> list1Pairs = new LinkedList<Pair>();
 		LinkedList<Pair> list2Pairs = new LinkedList<Pair>();
+		//Calculating and sorting by slope
 		for(int i = 0; i < list1.size(); i++){
 			list1Pairs.add(new Pair(i, list1.get(i).x - g.x, list1.get(i).y - g.y));
 			list2Pairs.add(new Pair(i, list2.get(i).x - g.x, list2.get(i).y - g.y));
 		}
 		Collections.sort(list1Pairs);
 		Collections.sort(list2Pairs);
+		//BinarySearch portion of the code
 		int low = 0;
 		int high = list1.size() - 1;
 		while(low <= high){
 			int mid = (low + high)/2;
+			//Determines number of ghostBusters and Ghosts 
+			//below and above the chosen line.
 			int aboveGhostBusters = 0;
 			int lowerGhostBusters = 0;
 			int aboveGhosts = 0;
@@ -126,6 +173,7 @@ public class GhostBusters{
 					lowerGhosts++;
 				}
 			}
+			//Uses data gathered to determine next step
 			if(aboveGhosts == aboveGhostBusters && 
 					lowerGhosts == lowerGhostBusters){
 				return list1Pairs.get(mid).index;
@@ -137,6 +185,7 @@ public class GhostBusters{
 		}
 		return -1;
 	}
+	//Pair class used specifically for slope, critical for sorting
 	static class Pair implements Comparable<Pair>{
 		int index;
 		double slope;
@@ -150,6 +199,7 @@ public class GhostBusters{
 			return Double.compare(slope, o.slope);
 		}
 	}
+	//GhostBuster and Ghost classes
 	static class GhostBuster extends Coordinates{
 		public GhostBuster(int x, int y) {
 			super(x, y);
