@@ -1,9 +1,6 @@
-package GhostBusters;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
-
 
 public class GhostBusters{
 	public static void main(String[] args){
@@ -21,6 +18,9 @@ public class GhostBusters{
 		list1.add(gb1);
 		list1.add(gb2);
 		list1.add(gb3);
+		Collections.sort(list1);
+		Collections.sort(list2);
+		//list1 and list2 has to be sorted
 		HashMap<GhostBuster, Ghost> result = pairOff(list1, list2);
 		for(GhostBuster gb: result.keySet()){
 			System.out.println("Ghostbuster at (" + gb.x + "," + gb.y
@@ -28,34 +28,66 @@ public class GhostBusters{
 					"," + result.get(gb).y + ")");
 		}
 	}
+	//Requirement: list1 and list2 will have to be sorted
 	static HashMap<GhostBuster, Ghost> pairOff(LinkedList<GhostBuster> list1,
 			LinkedList<Ghost> list2){
 		HashMap<GhostBuster, Ghost> result = new HashMap<GhostBuster, Ghost>();
-		Collections.sort(list1);
-		Collections.sort(list2);
-		LinkedList<Coordinates> list1Coord = new LinkedList<>();
-		for(int i = 0; i < list1.size(); i++) list1Coord.add(list1.get(i));
-		LinkedList<Coordinates> list2Coord = new LinkedList<>();
-		for(int i = 0; i < list2.size(); i++){
-			list2Coord.add(list2.get(i));
+		if(list1.size() == 1){
+			result.put(list1.get(0), list2.get(0));
+			return result;
 		}
-		for(int i = 0; i < list1.size(); i++){
-			int partner = 0;
-			if(list1Coord.get(0).x <= list2Coord.get(0).x){
-				Coordinates gb = list1Coord.get(0);
-				partner = determinePair(gb, list2Coord, list1Coord);
-				if(partner == -1) break;
+		LinkedList<Coordinates> list1Coord = new LinkedList<>();
+		list1Coord.addAll(list1);
+		LinkedList<Coordinates> list2Coord = new LinkedList<>();
+		list2Coord.addAll(list2);
+		int partner = 0;
+		double slope = 0.0;
+		Coordinates g;
+		if(list1Coord.get(0).x <= list2Coord.get(0).x){
+			g = list1Coord.get(0);
+			partner = determinePair(g, list2Coord, list1Coord);
+			if(partner != -1){
 				result.put((GhostBuster)list1Coord.get(0), (Ghost)list2Coord.get(partner));
+				double xDist = list1Coord.get(0).x - list2Coord.get(partner).x;
+				double yDist = list1Coord.get(0).y - list2Coord.get(partner).y;
+				slope = yDist/xDist;
 				list1Coord.remove(0);
 				list2Coord.remove(partner);
-			}else{
-				Coordinates g = list2Coord.get(0);
-				partner = determinePair(g, list1Coord, list2Coord);
-				if(partner == -1) break;
+			}
+		}else{
+			g = list2Coord.get(0);
+			partner = determinePair(g, list1Coord, list2Coord);
+			if(partner != -1){
+				double xDist = list1Coord.get(partner).x - list2Coord.get(0).x;
+				double yDist = list1Coord.get(partner).y - list2Coord.get(0).y;
+				slope = yDist/xDist;
 				result.put((GhostBuster)list1Coord.get(partner), (Ghost)list2Coord.get(0));
 				list1Coord.remove(partner);
 				list2Coord.remove(0);
 			}
+		}
+		LinkedList<GhostBuster> aboveGBs = new LinkedList<>();
+		LinkedList<GhostBuster> lowerGBs = new LinkedList<>();
+		LinkedList<Ghost> aboveGs = new LinkedList<>();
+		LinkedList<Ghost> lowerGs = new LinkedList<>();
+		for(int i = 0; i < list1Coord.size(); i++){
+			double currXDist = g.x - list1Coord.get(i).x;
+			double currYDist = g.y - list1Coord.get(i).y;
+			double currSlope = currYDist/currXDist;
+			if(currSlope > slope) aboveGBs.add((GhostBuster) list1Coord.get(i));
+			else lowerGBs.add((GhostBuster) list1Coord.get(i));
+		}
+		for(int i = 0; i < list2Coord.size(); i++){
+			double currXDist = g.x - list2Coord.get(i).x;
+			double currYDist = g.y - list2Coord.get(i).y;
+			double currSlope = currYDist/currXDist;
+			if(currSlope > slope) aboveGs.add((Ghost) list2Coord.get(i));
+			else lowerGs.add((Ghost) list2Coord.get(i));
+		}
+		if(aboveGBs.size() != 0){
+			result.putAll(pairOff(aboveGBs, aboveGs));
+		}else if(lowerGBs.size() != 0){
+			result.putAll(pairOff(lowerGBs, lowerGs));
 		}
 		return result;
 	}
