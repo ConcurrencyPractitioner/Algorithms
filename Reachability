@@ -1,0 +1,102 @@
+/*22-4 Reachability
+ * Introduction to ALGORITHMS Third Edition by Thomas H Cormen,
+ * Charles E. Leiserson, Ronald L. Rivest, Clifford Stein
+ * pg. 622
+ * Let G = (V,E) be a directed Graph in which each vertex u in V is labeled with
+ * a unique integer L(u) from the set{0,1...,|V-1|}. For each vertex u in V, let
+ * R(u) = {v in V: u to v} be the set of vertices that are reachable from u. Define
+ * min(u) to be the vertex of R(u) whose label is minimum, i.e., min(u) is the 
+ * vertex v such that L(v) = min{L(w): w in R(u)}. Give an O(V+E)-time algorithm
+ * that computes min(u) for all vertices u in V.
+ */
+#include <map>
+#include <memory>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+class GraphNode{
+public:
+	int index;
+	map<int, shared_ptr<GraphNode>> adjacentNodes;
+	GraphNode(int i):index(i),
+			adjacentNodes(map<int, shared_ptr<GraphNode>>()){
+	}
+	GraphNode(const GraphNode& graphNode):index(graphNode.index),
+			adjacentNodes(graphNode.adjacentNodes){
+	}
+	void addNode(shared_ptr<GraphNode> neighbor){
+		adjacentNodes.emplace(neighbor -> index, neighbor);
+	}
+	shared_ptr<GraphNode> getNode(int neighbor){
+		return adjacentNodes.find(neighbor) == adjacentNodes.end() ?
+				nullptr : adjacentNodes.at(neighbor);
+	}
+};
+class DirectedGraph{
+public:
+	map<int, shared_ptr<GraphNode>> allNodes;
+	DirectedGraph():allNodes(map<int, shared_ptr<GraphNode>>()){}
+	void addNode(int i){
+		allNodes.emplace(i, std::make_shared<GraphNode>(i));
+	}
+	bool addEdge(int i, int j){
+		if(allNodes.find(i) == allNodes.end() ||
+				allNodes.find(j) == allNodes.end()) return false;
+		allNodes.at(i) -> addNode(allNodes.at(j));
+		return true;
+	}
+	shared_ptr<GraphNode> getNode(int i){
+		return allNodes.find(i) == allNodes.end() ?
+						nullptr : allNodes.at(i);
+	}
+};
+class Reachability{
+public:
+	map<shared_ptr<GraphNode>, int> result;
+	map<int, shared_ptr<GraphNode>> allNodes;
+	Reachability(DirectedGraph& g):result(map<shared_ptr<GraphNode>, int>()),
+			allNodes(g.allNodes){}
+	map<shared_ptr<GraphNode>, int> determineMin(){
+		while(!allNodes.empty()){
+			shared_ptr<GraphNode> curr = allNodes.begin() -> second;
+			minForNode(curr);
+		}
+		return result;
+	}
+	int minForNode(shared_ptr<GraphNode> curr){
+		result.emplace(curr, curr->index);
+		allNodes.erase(curr -> index);
+		int min = curr -> index;
+		for(auto it = curr -> adjacentNodes.begin();
+				it != curr -> adjacentNodes.end(); it++){
+			int adjacentMin = result.find(it->second) == result.end() ?
+					minForNode(it->second) : result.at(it->second);
+			min = adjacentMin < min ? adjacentMin : min;
+		}
+		result.erase(curr);
+		result.emplace(curr, min);
+		return min;
+	}
+};
+int main(){
+	DirectedGraph dag = DirectedGraph();
+	dag.addNode(0);
+	dag.addNode(1);
+	dag.addNode(2);
+	dag.addNode(3);
+	dag.addNode(4);
+	dag.addNode(5);
+	dag.addEdge(0,1);
+	dag.addEdge(1,2);
+	dag.addEdge(2,3);
+	dag.addEdge(3,4);
+	dag.addEdge(4,5);
+	dag.addEdge(5,2);
+	Reachability r = Reachability(dag);
+	auto result = r.determineMin();
+	for(auto it = result.begin(); it != result.end(); it++){
+		cout << it->first->index << " " << it->second << endl;
+	}
+}
