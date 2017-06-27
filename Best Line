@@ -1,0 +1,156 @@
+#include <map>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class GraphPoint{
+public:
+	double x;
+	double y;
+	GraphPoint(double xCoord, double yCoord):x(xCoord), y(yCoord){}
+	bool operator<(GraphPoint p){
+		return x < p.x;
+	}
+};
+class Line{
+public:
+	double epsilon = .0001;
+	double slope, intercept;
+	bool infinite_slope = false;
+	Line(GraphPoint p, GraphPoint q){
+		int xDist = p.x < q.x ? q.x - p.x : p.x - q.x;
+		if(xDist > epsilon){
+			slope = (p.y - q.y)/(p.x - q.x);
+			intercept = p.y - slope*p.x;
+		}else{
+			infinite_slope = true;
+			intercept = p.x;
+		}
+	}
+	double floorToNearestEpsilon(double d){
+		int r = (int)(d/epsilon);
+		return ((double)r)*epsilon;
+	}
+	bool isEquivalent(double a, double b){
+		int diff = a < b ? b - a: a - b;
+		return diff < epsilon;
+	}
+	bool isEquivalent(const Line& l){
+		if(isEquivalent(l.slope, slope) && isEquivalent(l.intercept, intercept) &&
+				(infinite_slope == l.infinite_slope)){
+			return true;
+		}
+		return false;
+	}
+};
+template <class T, class E>
+class HashMapList{
+public:
+	map<T, vector<E>> mapList = map<T, vector<E>>();
+	void put(T key, E item){
+		if(mapList.find(key) == mapList.end()){
+			mapList.emplace(key, vector<E>());
+		}
+		mapList.at(key).emplace_back(item);
+	}
+	void put(T key, vector<E> items){
+		mapList.emplace(key, items);
+	}
+	vector<E> get(T key){
+		return mapList.find(key) == mapList.end() ?
+				vector<E>() : mapList.at(key);
+	}
+	bool containsKey(T key){
+		return mapList.find(key) != mapList.end();
+	}
+	bool containsKeyValue(T key, E value){
+		if(!containsKey(key)) return false;
+		vector<E> list = mapList.at(key);
+		return std::find(list.begin(), list.end(), value) == list.end();
+	}
+};
+ostream & operator<<(ostream & fout, const Line& l){
+	bool infinite_slope = l.infinite_slope;
+	if(infinite_slope) fout << "x=" << l.intercept;
+	else{
+		if(l.intercept < 0){
+			fout << "y=" << l.slope << "x" << l.intercept;
+		}else{
+			fout << "y=" << l.slope << "x+" << l.intercept;
+		}
+	}
+	return fout;
+}
+template <class K, class V>
+ostream & operator<<(ostream & fout, const HashMapList<K, V>& list){
+	for(auto it = list.mapList.begin(); it != list.mapList.end(); it++){
+		fout << it->first;
+		fout << ": {";
+		for(V i : it->second){
+			fout << i << ", ";
+		}
+		fout << "}";
+	}
+	return fout;
+}
+class BestLine{
+public:
+	int countEquivalentLines(vector<Line> lines, Line line){
+		int count = 0;
+		for(Line parallelLine: lines){
+			count += parallelLine.isEquivalent(line) ? 1 : 0;
+		}
+		return count;
+	}
+	int countEquivalentLines(HashMapList<double, Line> linesBySlope, Line line){
+		double key = line.floorToNearestEpsilon(line.slope);
+		int count = countEquivalentLines(linesBySlope.get(key), line);
+		count += countEquivalentLines(linesBySlope.get(key - line.epsilon), line);
+		count += countEquivalentLines(linesBySlope.get(key + line.epsilon), line);
+		return count;
+	}
+	Line getBestLine(HashMapList<double, Line> linesBySlope){
+		Line bestLine = Line(GraphPoint(0,0), GraphPoint(0,0));
+		int bestCount = 0;
+		for(auto it = linesBySlope.mapList.begin(); it != linesBySlope.mapList.end(); it++){
+			vector<Line> lines = it->second;
+			for(Line line: lines){
+				int count = countEquivalentLines(linesBySlope, line);
+				if(count > bestCount){
+					bestLine = line;
+					bestCount = count;
+				}
+			}
+		}
+		return bestLine;
+	}
+	HashMapList<double, Line> getListOfLines(vector<GraphPoint> points){
+		HashMapList<double, Line> linesBySlope = HashMapList<double,Line>();
+		for(int i = 0; i < points.size(); i++){
+			for(int j = i+1; j < points.size(); j++){
+				Line line = Line(points.at(i), points.at(j));
+				double key = line.floorToNearestEpsilon(line.slope);
+				linesBySlope.put(key, line);
+			}
+		}
+		return linesBySlope;
+	}
+	Line findBestLine(vector<GraphPoint> points){
+		HashMapList<double, Line> linesBySlope = getListOfLines(points);
+		return getBestLine(linesBySlope);
+	}
+};
+int main(){
+	GraphPoint a = GraphPoint(1,1);
+	GraphPoint b = GraphPoint(2,2);
+	GraphPoint c = GraphPoint(3,3.00000000001);
+	GraphPoint d = GraphPoint(1,4);
+	GraphPoint f = GraphPoint(1,5.00000000001);
+	GraphPoint e = GraphPoint(2,5);
+	vector<GraphPoint> vec = {a,b,c,d,e,f};
+	BestLine bestL;
+	cout << bestL.findBestLine(vec) << endl;
+}
+
