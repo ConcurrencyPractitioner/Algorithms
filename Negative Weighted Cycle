@@ -1,0 +1,143 @@
+/*Chapter 24 Section 1 Problem 6
+ * Introduction to ALGORITHMS Third Edition
+ * Suppose that a weighted, directed graph G = (V,E) has a 
+ * negative weight cycle. Give an efficient algorithm to list
+ * the vertices of one such cycle.
+ * Time: Quadratic O(VE) time.
+ */
+#include <string>
+#include <map>
+#include <memory>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class WeightedGraphNode{
+public:
+	double id;
+	map<double, shared_ptr<WeightedGraphNode>> adjacentNodes;
+	map<shared_ptr<WeightedGraphNode>, double> weights;
+	WeightedGraphNode(double i):id(i){}
+	void addWeightedGraphNode(shared_ptr<WeightedGraphNode> node, double weight){
+		weights.emplace(node, weight);
+		adjacentNodes.emplace(node -> id, node);
+	}
+	shared_ptr<WeightedGraphNode> adjacentNode(double id){
+		return adjacentNodes.find(id) != adjacentNodes.end() ?
+				adjacentNodes.at(id) : nullptr;
+	}
+	double getWeight(double id){
+		return getWeight(adjacentNode(id));
+	}
+	double getWeight(shared_ptr<WeightedGraphNode> node){
+		if(node == nullptr) return 0.0;
+		return weights.at(node);
+	}
+	friend bool operator<(const shared_ptr<WeightedGraphNode>& node1,
+			const shared_ptr<WeightedGraphNode>& node2){
+		return node1 -> id < node2 -> id;
+	}
+};
+class WeightedGraph{
+public:
+	map<double, shared_ptr<WeightedGraphNode>> nodes;
+	void addNode(double id){
+		nodes.emplace(id, std::make_shared<WeightedGraphNode>(id));
+	}
+	shared_ptr<WeightedGraphNode> node(double id){
+		return nodes.find(id) != nodes.end() ? nodes.at(id) : nullptr;
+	}
+	double getWeight(double id1, double id2){
+		return nodes.find(id1) != nodes.end() && nodes.find(id2) != nodes.end() ?
+				nodes.at(id1) -> getWeight(id2) : 0.0;
+	}
+	void addWeightedEdge(double id1, double id2, double weight){
+		if(nodes.find(id1) == nodes.end() || nodes.find(id2) == nodes.end()) return;
+		nodes.at(id1) -> addWeightedGraphNode(nodes.at(id2), weight);
+	}
+};
+ostream & operator<<(ostream & fout, vector<shared_ptr<WeightedGraphNode>> cycle){
+	vector<double> ids;
+	for(shared_ptr<WeightedGraphNode> node: cycle){
+		if(std::find(ids.begin(), ids.end(), node -> id) != ids.end()){
+			continue;
+		}
+		fout << node -> id << " ";
+		ids.emplace_back(node -> id);
+	}
+	fout << endl;
+	return fout;
+}
+class NegativeWeightedCycle{
+public:
+	map<double, shared_ptr<WeightedGraphNode>> nodes;
+	vector<shared_ptr<WeightedGraphNode>> visitedNodes;
+	vector<shared_ptr<WeightedGraphNode>> emptyCycle;
+	WeightedGraph dag;
+	NegativeWeightedCycle(WeightedGraph &d):dag(d), nodes(d.nodes){}
+	int findPosition(shared_ptr<WeightedGraphNode> &currNode,
+			vector<shared_ptr<WeightedGraphNode>> (&currentPath)){
+		int index = 0;
+		while(index != currentPath.size()){
+			if(currNode -> id == currentPath.at(index) -> id) return index;
+			index++;
+		}
+		return index;
+	}
+	vector<shared_ptr<WeightedGraphNode>> findCycle(shared_ptr<WeightedGraphNode> &currNode,
+			vector<shared_ptr<WeightedGraphNode>> (&currentPath)){
+		if(nodes.find(currNode -> id) == nodes.end()){
+			return emptyCycle;
+		}
+		visitedNodes.emplace_back(currNode);
+		int position = findPosition(currNode, currentPath);
+		if(position != currentPath.size()){
+			double weight = 0;
+			currentPath.emplace_back(currNode);
+			vector<shared_ptr<WeightedGraphNode>> result;
+			for(int iter = position; iter < currentPath.size() - 1; iter++){
+				weight += dag.getWeight(currentPath.at(iter) -> id,
+						currentPath.at(iter+1) -> id);
+				result.emplace_back(currentPath.at(iter));
+			}
+			result.emplace_back(currentPath.back());
+			if(weight < 0) return result;
+			else{
+				return emptyCycle;
+			}
+		}
+		currentPath.emplace_back(currNode);
+		for(auto iter = currNode -> adjacentNodes.begin();
+				iter != currNode -> adjacentNodes.end(); iter++){
+			vector<shared_ptr<WeightedGraphNode>> result = findCycle(iter -> second, currentPath);
+			if(!result.empty()) return result;
+			currentPath.pop_back();
+		}
+		return vector<shared_ptr<WeightedGraphNode>>();
+	}
+	vector<shared_ptr<WeightedGraphNode>> findNegativeWeightedCycle(){
+		vector<shared_ptr<WeightedGraphNode>> result;
+		while(!nodes.empty()){
+			vector<shared_ptr<WeightedGraphNode>> newPath;
+			result = findCycle(nodes.begin() -> second, newPath);
+			if(!result.empty()) return result;
+			for(shared_ptr<WeightedGraphNode> node: visitedNodes){
+				nodes.erase(node -> id);
+			}
+			visitedNodes.clear();
+		}
+		return result;
+	}
+};
+int main(){
+	WeightedGraph g;
+	for(double i = 0; i < 10; i++){
+		g.addNode(i);
+	}
+	g.addWeightedEdge(0,1,1);
+	g.addWeightedEdge(1,0,-2);
+	NegativeWeightedCycle cycle = NegativeWeightedCycle(g);
+	cout << cycle.findNegativeWeightedCycle();
+}
