@@ -1,0 +1,194 @@
+/* pg. 682 24-6 Introduction to ALGORITHMS
+ * Bitonic Shortest Paths
+ * A sequence if bitonic if it monotomically increases and then monotonically de-
+ * creas, or if by a circular shift it monotomically increases and then 
+ * monotomically decreases For example the sequences {1,4,6,8,3,-2}, {9,2,-4,-10,-5}, and
+ * {1,2,3,4} are bitonic. Suppose that we are given a directed graph G = {V,E}.
+ * with weight function w: E -> R. where all edge weights are unique, and
+ * we wish to find single source shortst paths from a source vertex s. We are
+ * given an additional piece of informtation, for each vertex v in V, the weights
+ * of the edges along any shortest path from s to v form a bitonic sequence.
+ * Give the most effiecient algorithm you can to solve this problem.
+ */
+#include <string>
+#include <map>
+#include <memory>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class WeightedGraphNode{
+public:
+	double id;
+	map<double, shared_ptr<WeightedGraphNode>> adjacentNodes;
+	map<shared_ptr<WeightedGraphNode>, double> weights;
+	WeightedGraphNode(double i):id(i){}
+	void addWeightedGraphNode(shared_ptr<WeightedGraphNode> node, double weight){
+		weights.emplace(node, weight);
+		adjacentNodes.emplace(node -> id, node);
+	}
+	shared_ptr<WeightedGraphNode> adjacentNode(double id){
+		return adjacentNodes.find(id) != adjacentNodes.end() ?
+				adjacentNodes.at(id) : nullptr;
+	}
+	double getWeight(double id){
+		return getWeight(adjacentNode(id));
+	}
+	double getWeight(shared_ptr<WeightedGraphNode> node){
+		if(node == nullptr) return 0.0;
+		return weights.at(node);
+	}
+	friend bool operator<(const shared_ptr<WeightedGraphNode>& node1,
+			const shared_ptr<WeightedGraphNode>& node2){
+		return node1 -> id < node2 -> id;
+	}
+};
+class WeightedGraph{
+public:
+	map<double, shared_ptr<WeightedGraphNode>> nodes;
+	void addNode(double id){
+		nodes.emplace(id, std::make_shared<WeightedGraphNode>(id));
+	}
+	shared_ptr<WeightedGraphNode> node(double id){
+		return nodes.find(id) != nodes.end() ? nodes.at(id) : nullptr;
+	}
+	double getWeight(double id1, double id2){
+		return nodes.find(id1) != nodes.end() && nodes.find(id2) != nodes.end() ?
+				nodes.at(id1) -> getWeight(id2) : 0.0;
+	}
+	void addWeightedEdge(double id1, double id2, double weight){
+		if(nodes.find(id1) == nodes.end() || nodes.find(id2) == nodes.end()) return;
+		nodes.at(id1) -> addWeightedGraphNode(nodes.at(id2), weight);
+	}
+};
+ostream & operator<<(ostream & fout, vector<shared_ptr<WeightedGraphNode>> cycle){
+	vector<double> ids;
+	for(shared_ptr<WeightedGraphNode> node: cycle){
+		if(std::find(ids.begin(), ids.end(), node -> id) != ids.end()){
+			continue;
+		}
+		fout << node -> id << " ";
+		ids.emplace_back(node -> id);
+	}
+	fout << endl;
+	return fout;
+}
+ostream & operator<<(ostream & fout,
+		map<shared_ptr<WeightedGraphNode>, double> pathWeights){
+	for(auto it = pathWeights.begin(); it != pathWeights.end(); it++){
+		fout << it->first->id << " " << it->second << endl;
+	}
+	return fout;
+}
+ostream & operator<<(ostream & fout,map<double, double> pathWeights){
+	for(auto it = pathWeights.begin(); it != pathWeights.end(); it++){
+		fout << "Weight of shortest path from source to  "<<it->first << " is " << it->second << endl;
+	}
+	return fout;
+}
+class RunningStatus{
+public:
+	double weight;
+	shared_ptr<WeightedGraphNode> predecessor;
+	RunningStatus(double w):weight(w), predecessor(nullptr){}
+};
+class RunningPointer{
+public:
+	bool increasing;
+	int changeCount = 0;
+	RunningPointer(){}
+	RunningPointer(const RunningPointer& rp):increasing(rp.increasing),
+			changeCount(rp.changeCount){}
+	bool setIncreasing(bool b){
+		if(increasing == b) return true;
+		if(changeCount == 3) return false;
+		increasing = b;
+		changeCount++;
+		return true;
+	}
+};
+class BitonicShortestPaths{
+public:
+	map<double, shared_ptr<WeightedGraphNode>> nodes;
+	WeightedGraph dag;
+	shared_ptr<WeightedGraphNode> source;
+	map<double, RunningStatus> status;
+	BitonicShortestPaths(WeightedGraph& g, shared_ptr<WeightedGraphNode>& s):
+		dag(g), nodes(g.nodes), source(s){
+	}
+	vector<shared_ptr<WeightedGraphNode>> findAdjacentNodes(shared_ptr<WeightedGraphNode>& node){
+		vector<shared_ptr<WeightedGraphNode>> result;
+		for(auto it = node -> adjacentNodes.begin();
+				it != node -> adjacentNodes.end(); it++){
+			result.emplace_back(it->second);
+		}
+		return result;
+	}
+	void fillMapDFS(shared_ptr<WeightedGraphNode>& currNode, RunningPointer rp){
+		if(currNode == nullptr) return;
+		vector<shared_ptr<WeightedGraphNode>> adjacentNodes = findAdjacentNodes(currNode);
+		for(shared_ptr<WeightedGraphNode> adjacentNode: adjacentNodes){
+			shared_ptr<WeightedGraphNode> predNode = status.at(adjacentNode -> id).predecessor;
+			double id;
+			double predEdgeWeight;
+			bool isViable = true;
+			if(predNode == nullptr){
+				predNode = currNode;
+				id = predNode -> id;
+				predEdgeWeight = dag.getWeight(currNode -> id, adjacentNode -> id);
+			}
+			else{
+				id = predNode -> id;
+				predEdgeWeight = dag.getWeight(id, adjacentNode -> id);
+				RunningStatus rs = status.at(id);
+				bool increasing = predEdgeWeight > dag.getWeight(rs.predecessor->id, id);
+				isViable = rp.setIncreasing(increasing);
+			}
+			double currWeight = status.at(id).weight + dag.getWeight(id, adjacentNode -> id);
+			if(currWeight <= status.at(adjacentNode -> id).weight && isViable){
+				status.at(adjacentNode -> id).weight = currWeight;
+				status.at(adjacentNode -> id).predecessor = predNode;
+				RunningPointer adjRp = rp;
+				fillMapDFS(adjacentNode, adjRp);
+			}
+		}
+	}
+	map<double, double> shortestPaths(){
+		nodes.erase(source -> id);
+		for(auto it = nodes.begin(); it != nodes.end(); it++){
+			RunningStatus rs = RunningStatus(0x1.fffffffffffffP+1023);
+			status.emplace(it->second->id, rs);
+		}
+		RunningStatus rsSrc = RunningStatus(0.0);
+		status.emplace(source->id, rsSrc);
+		RunningPointer rp = RunningPointer();
+		fillMapDFS(source, rp);
+		map<double, double> result;
+		for(auto it = status.begin(); it != status.end(); it++){
+			result.emplace(it->first, it->second.weight);
+		}
+		return result;
+	}
+};
+int main(){
+	WeightedGraph g;
+	for(double i = 0; i < 10; i++){
+		g.addNode(i);
+	}
+	g.addWeightedEdge(0,1,1);
+	g.addWeightedEdge(1,2,2);
+	g.addWeightedEdge(2,3,4);
+	g.addWeightedEdge(3,4,6);
+	g.addWeightedEdge(4,5,8);
+	g.addWeightedEdge(5,6,-1);
+	g.addWeightedEdge(6,7,-2);
+	g.addWeightedEdge(7,8,-4);
+	g.addWeightedEdge(8,9,-8);
+	shared_ptr<WeightedGraphNode> source = g.node(1);
+	BitonicShortestPaths shortestPaths = BitonicShortestPaths(g,source);
+	cout << "Source: " << source->id << endl;
+	cout << shortestPaths.shortestPaths();
+}
+
