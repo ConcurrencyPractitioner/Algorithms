@@ -1,4 +1,4 @@
-/* pg. 682 24-6 Introduction to ALGORITHMS
+/* pg. 682 24-6 Introduction to ALGORITHMS Third Edition
  * Bitonic Shortest Paths
  * A sequence is bitonic if it monotonically increases and then monotonically de-
  * creas, or if by a circular shift it monotonically increases and then 
