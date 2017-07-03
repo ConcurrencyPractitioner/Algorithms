@@ -1,3 +1,5 @@
+//Note: this algorithm was converted from Java into C++
+//Not mine
 #include <map>
 #include <iostream>
 #include <vector>
