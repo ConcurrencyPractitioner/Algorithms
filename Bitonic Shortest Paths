@@ -1,12 +1,12 @@
 /* pg. 682 24-6 Introduction to ALGORITHMS
  * Bitonic Shortest Paths
- * A sequence if bitonic if it monotomically increases and then monotonically de-
- * creas, or if by a circular shift it monotomically increases and then 
- * monotomically decreases For example the sequences {1,4,6,8,3,-2}, {9,2,-4,-10,-5}, and
+ * A sequence is bitonic if it monotonically increases and then monotonically de-
+ * creas, or if by a circular shift it monotonically increases and then 
+ * monotonically decreases. For example, the sequences {1,4,6,8,3,-2}, {9,2,-4,-10,-5}, and
  * {1,2,3,4} are bitonic. Suppose that we are given a directed graph G = {V,E}.
- * with weight function w: E -> R. where all edge weights are unique, and
- * we wish to find single source shortst paths from a source vertex s. We are
- * given an additional piece of informtation, for each vertex v in V, the weights
+ * with weight function w: E -> R, where all edge weights are unique, and
+ * we wish to find single-source shortest-paths from a source vertex s. We are
+ * given an additional piece of information, for each vertex v in V, the weights
  * of the edges along any shortest path from s to v form a bitonic sequence.
  * Give the most effiecient algorithm you can to solve this problem.
  */
