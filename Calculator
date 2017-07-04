@@ -15,22 +15,6 @@ public:
 		return s == "*" || s == "/" || s == "+" || s == "-" ||
 				s == "(" || s == ")";
 	}
-	vector<string> convertToVector(std::string s){
-		vector<string> result;
-		string currStr = "";
-		for(unsigned int i = 0; i < s.size(); i++){
-			string holder = "";
-			holder += s.at(i);
-			if(isOperator(holder)){
-				result.emplace_back(currStr);
-				result.emplace_back(holder);
-				currStr = "";
-			}
-			else currStr += s.at(i);
-		}
-		result.emplace_back(currStr);
-		return result;
-	}
 	void parenthesize(vector<string>& operators, vector<string>& operands){
 		int rightCurly = 1;
 		int leftCurly = 0;
