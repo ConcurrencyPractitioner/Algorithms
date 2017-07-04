@@ -1,5 +1,5 @@
 /*Calculator: Evaluate an expression using only the operators
- * (,),+,-,/,and *. 
+ * (,),+,-,/,and *.
  */
 #include <string>
 #include <iostream>
@@ -7,13 +7,42 @@
 
 using namespace std;
 
+ostream & operator<<(ostream & fout, vector<string> vec){
+	for(string s: vec){
+		fout << s << " ";
+	}
+	fout << endl;
+	return fout;
+}
 class Calculator{
 public:
 	vector<string> expression;
 	Calculator(vector<string>& exp):expression(exp){}
+	Calculator(string exp):expression(convertToVector(exp)){}
 	bool isOperator(string s){
 		return s == "*" || s == "/" || s == "+" || s == "-" ||
 				s == "(" || s == ")";
+	}
+	vector<string> convertToVector(std::string s){
+		vector<string> result;
+		string currStr = "";
+		for(unsigned int i = 0; i < s.size(); i++){
+			string holder = "";
+			holder += s.at(i);
+			if(isOperator(holder)){
+				result.emplace_back(currStr);
+				result.emplace_back(holder);
+				currStr = "";
+			}
+			else currStr += s.at(i);
+		}
+		vector<string> finalResult;
+		for(unsigned int i = 0; i < result.size(); i++){
+			if(result.at(i) != ""){
+				finalResult.emplace_back(result.at(i));
+			}
+		}
+		return finalResult;
 	}
 	void parenthesize(vector<string>& operators, vector<string>& operands){
 		int rightCurly = 1;
@@ -109,9 +138,9 @@ public:
 	}
 };
 int main(){
-	vector<string> expression = {"(","25", "*", "2",")","*","(","3","+","4",")"};
-	Calculator c = Calculator(expression);
-	cout << c.evaluate() << endl;
+	Calculator c2 = Calculator("(25*2)*(3+4)");
+	cout << c2.evaluate() << endl;
 }
+
 
 
