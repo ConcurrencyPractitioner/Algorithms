@@ -1,0 +1,133 @@
+/*Calculator: Evaluate an expression using only the operators
+ * (,),+,-,/,and *. 
+ */
+#include <string>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+class Calculator{
+public:
+	vector<string> expression;
+	Calculator(vector<string>& exp):expression(exp){}
+	bool isOperator(string s){
+		return s == "*" || s == "/" || s == "+" || s == "-" ||
+				s == "(" || s == ")";
+	}
+	vector<string> convertToVector(std::string s){
+		vector<string> result;
+		string currStr = "";
+		for(unsigned int i = 0; i < s.size(); i++){
+			string holder = "";
+			holder += s.at(i);
+			if(isOperator(holder)){
+				result.emplace_back(currStr);
+				result.emplace_back(holder);
+				currStr = "";
+			}
+			else currStr += s.at(i);
+		}
+		result.emplace_back(currStr);
+		return result;
+	}
+	void parenthesize(vector<string>& operators, vector<string>& operands){
+		int rightCurly = 1;
+		int leftCurly = 0;
+		vector<string> subExpression;
+		operators.pop_back();
+		subExpression.insert(subExpression.begin(), operands.back());
+		operands.pop_back();
+		while(rightCurly != leftCurly){
+			if(operators.back() == "(" && rightCurly - leftCurly == 1){
+				operators.pop_back();
+				break;
+			}else if(operators.back() == ")"){
+				rightCurly++;
+				subExpression.insert(subExpression.begin(), operators.back());
+				operators.pop_back();
+				subExpression.insert(subExpression.begin(), operands.back());
+				operands.pop_back();
+			}else if(operators.back() == "(" && rightCurly - leftCurly > 1){
+				leftCurly++;
+				subExpression.insert(subExpression.begin(), operators.back());
+				operators.pop_back();
+			}else{
+				subExpression.insert(subExpression.begin(), operators.back());
+				operators.pop_back();
+				subExpression.insert(subExpression.begin(), operands.back());
+				operands.pop_back();
+			}
+		}
+		Calculator c = Calculator(subExpression);
+		double subRes = c.evaluate();
+		operands.emplace_back(std::to_string(subRes));
+	}
+	double evaluate(){
+		string::size_type ss;
+		vector<string> operators;
+		vector<string> operands;
+		for(int i = 0; i <= expression.size() - 1; i++){
+			if(isOperator(expression.at(i))) operators.emplace_back(expression.at(i));
+			else operands.emplace_back(expression.at(i));
+		}
+		vector<string> secondaryOperators;
+		vector<string> secondaryOperands;
+		while(!operands.empty() && !operators.empty()){
+			if(operators.size() >= 2 && operators.at(operators.size() - 2) == ")"){
+				string operatorCurr = operators.back();
+				string operand = operands.back();
+				operators.pop_back();
+				operands.pop_back();
+				parenthesize(operators, operands);
+				operators.emplace_back(operatorCurr);
+				operands.emplace_back(operand);
+			}
+			if(operators.back() == ")"){
+				parenthesize(operators, operands);
+				continue;
+			}
+			if(operators.back() == "*" || operators.back() == "/"){
+				double first = std::stod(operands.back(), &ss);
+				operands.pop_back();
+				double second = std::stod(operands.back(), &ss);
+				operands.pop_back();
+				if(operators.back() == "*"){
+					double product = first * second;
+					operands.emplace_back(std::to_string(product));
+					operators.pop_back();
+				}else{
+					double quotient = second / first;
+					operands.emplace_back(std::to_string(quotient));
+					operators.pop_back();
+				}
+			}else{
+				secondaryOperators.emplace_back(operators.back());
+				operators.pop_back();
+				secondaryOperands.emplace_back(operands.back());
+				operands.pop_back();
+			}
+		}
+		if(operands.size() == 1)  secondaryOperands.emplace_back(operands.back());
+		double res = std::stod(secondaryOperands.back(), &ss);
+		secondaryOperands.pop_back();
+		while(!secondaryOperands.empty()){
+			double operand = std::stod(secondaryOperands.back(), &ss);
+			if(secondaryOperators.back() == "-"){
+				res -= operand;
+			}else{
+				res += operand;
+			}
+			secondaryOperators.pop_back();
+			secondaryOperands.pop_back();
+		}
+		return res;
+	}
+};
+int main(){
+	vector<string> expression = {"(","25", "*", "2",")","*","(","3","+","4",")"};
+	Calculator c = Calculator(expression);
+	cout << c.evaluate() << endl;
+}
+
+
