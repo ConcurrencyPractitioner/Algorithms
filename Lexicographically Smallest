@@ -1,0 +1,96 @@
+/*Given a N∗M matrix of numbers from 1 to N∗M(each  number occurs only once), 
+find a path from top left to right bottom while moving right or down only. If
+we sort all values visited in this path it should be lexico-graphically smallest.
+*/
+#include <vector>
+#include <iostream>
+#include <string>
+#include <map>
+#include <algorithm>
+
+using namespace std;
+
+class Tuple{
+public:
+	unsigned long row;
+	unsigned long col;
+	double value;
+	Tuple(unsigned long r, unsigned long c, double v):row(r), col(c),
+			value(v){}
+	Tuple(const Tuple& t):row(t.row), col(t.col), value(t.value){}
+	friend bool operator<(const Tuple& tuple1, const Tuple& tuple2){
+		return tuple1.value < tuple2.value;
+	}
+};
+class TrackerTuple{
+public:
+	unsigned long index;
+	Tuple content;
+	TrackerTuple(unsigned long i, Tuple c):index(i), content(c){}
+};
+template<unsigned long rows, unsigned long cols>
+class Lexicographically_Smallest{
+public:
+	double matrix[rows][cols] = {
+	{2,1,-3},
+	{3,-2,6},
+	{-1,4,5}
+    };
+	Lexicographically_Smallest(){}
+	bool isAdjacent(unsigned long x1, unsigned long y1, unsigned long x2, unsigned long y2){
+		bool t=((x1 == x2 + 1 || x2 == x1 + 1) && y1 == y2) ||
+				((y1 == y2 + 1 || y2 == y1 + 1)&& x2 == x1);
+		return t;
+	}
+	Tuple findSmallestTuple(unsigned long x1, unsigned long y1, unsigned long x2, unsigned long y2){
+		Tuple smallestTuple = Tuple(0,0,0x1.fffffffffffffP+1023);
+		for(unsigned long r = x1; r <= x2; r++){
+			for(unsigned long c = y1; c <= y2; c++){
+				if(matrix[r][c] < smallestTuple.value && (matrix[r][c] != matrix[x1][y1] &&
+				    matrix[r][c] != matrix[x2][y2])){
+					smallestTuple.row = r;
+					smallestTuple.col = c;
+					smallestTuple.value = matrix[r][c];
+				}
+			}
+		}
+		return smallestTuple;
+	}
+	vector<double> findLexicographicallySmallestRoute(){
+		vector<Tuple> tuples;
+		vector<double> result;
+		tuples.emplace_back(Tuple(0,0, matrix[0][0]));
+		tuples.emplace_back(Tuple(rows - 1, cols - 1, matrix[rows - 1][cols - 1]));
+		result.emplace_back(matrix[0][0]);
+		result.emplace_back(matrix[rows-1][cols-1]);
+		while(tuples.size() != rows + cols - 1){
+			vector<TrackerTuple> newTuples;
+			for(unsigned long i = 0; i < tuples.size() - 1; i++){
+				if(!isAdjacent(tuples.at(i).row, tuples.at(i).col,
+						tuples.at(i+1).row, tuples.at(i+1).col)){
+					Tuple smallestTuple = findSmallestTuple(tuples.at(i).row, tuples.at(i).col,
+							tuples.at(i+1).row, tuples.at(i+1).col);
+					TrackerTuple tTuple = TrackerTuple(i, smallestTuple);
+					newTuples.emplace_back(tTuple);
+				}
+			}
+			int rightShift = 0;
+			for(unsigned long i = 0; i < newTuples.size(); i++){
+				TrackerTuple tTuple = newTuples.at(i);
+				tuples.insert(tuples.begin() + tTuple.index + rightShift + 1, tTuple.content);
+				result.insert(result.begin() + tTuple.index + rightShift + 1, tTuple.content.value);
+				rightShift++;
+			}
+		}
+		return result;
+	}
+};
+int main(){
+    Lexicographically_Smallest<3,3> l_S = Lexicographically_Smallest<3,3>();
+    for(double d: l_S.findLexicographicallySmallestRoute()){
+        cout << d << " ";
+    }
+    cout << endl;
+}
+
+
