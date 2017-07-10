@@ -1,0 +1,144 @@
+/* 4.9 CRACKING the CODING INTERVIEW Sixth Edition
+ *BST SEQUENCES, pg. 110
+ */
+#include <string>
+#include <map>
+#include <memory>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class BinaryNode{
+public:
+	shared_ptr<BinaryNode> left;
+	shared_ptr<BinaryNode> right;
+	int content;
+	BinaryNode(int c):content(c), left(nullptr), right(nullptr){}
+	void setLeft(shared_ptr<BinaryNode> l){
+		left = l;
+	}
+	void setRight(shared_ptr<BinaryNode> r){
+		right = r;
+	}
+	void insert(int i){
+		if(i <= content){
+			if(left != nullptr){
+				left ->insert(i);
+			}else{
+				left = std::make_shared<BinaryNode>(i);
+			}
+		}else{
+			if(right != nullptr){
+				right -> insert(i);
+			}else{
+				right = std::make_shared<BinaryNode>(i);
+			}
+		}
+	}
+};
+class BinarySearchTree{
+public:
+	shared_ptr<BinaryNode> root;
+	vector<int> list;
+	BinarySearchTree():root(nullptr){}
+	int size = 0;
+	void insert(int i){
+		list.emplace_back(i);
+		size++;
+		if(root == nullptr) root = std::make_shared<BinaryNode>(i);
+		else root -> insert(i);
+	}
+};
+class TrackList{
+public:
+	vector<shared_ptr<BinaryNode>> currentNodes;
+	vector<shared_ptr<BinaryNode>> adjacentNodes;
+	int size;
+	TrackList(int s):size(s){
+	}
+	TrackList(const TrackList& tList):size(tList.size),
+			currentNodes(tList.currentNodes), adjacentNodes(tList.adjacentNodes){}
+	bool addAdjacentNode(shared_ptr<BinaryNode> node){
+		if(std::find(adjacentNodes.begin(), adjacentNodes.end(), node)
+			== adjacentNodes.end()) return;
+		adjacentNodes.erase(std::remove(adjacentNodes.begin(),
+				adjacentNodes.end(), node), adjacentNodes.end());
+		if(node -> left != nullptr) adjacentNodes.emplace_back(node -> left);
+		if(node -> right != nullptr) adjacentNodes.emplace_back(node -> right);
+		currentNodes.emplace_back(node);
+		return printCurrentNodes();
+	}
+	bool addCurrentNode(shared_ptr<BinaryNode> node){
+		currentNodes.emplace_back(node);
+		return printCurrentNodes();
+	}
+	void addAdjacentNode(shared_ptr<BinaryNode> node){
+		adjacentNodes.emplace_back(node);
+	}
+	bool printCurrentNodes(){
+		if(currentNodes.size() == size){
+			cout << "Sequence is ";
+			for(shared_ptr<BinaryNode> node: currentNodes){
+				cout << node -> content << ", ";
+			}
+			cout << endl;
+			return true;
+		}
+		return false;
+	}
+};
+class BSTSequences{
+public:
+	shared_ptr<BinaryNode> root;
+	map<int,vector<int>> dependencies;
+	BinarySearchTree bst;
+	map<int, int> check;
+	BSTSequences(BinarySearchTree tree):root(tree.root), bst(tree){
+		for(int i = 0; i < bst.size; i++){
+			if(check.find(bst.list.at(i)) != check.end()){
+				check.at(bst.list.at(i))++;
+			}else{
+				check.emplace(bst.list.at(i), 1);
+			}
+		}
+	}
+	bool legal(vector<shared_ptr<BinaryNode>>& path){
+		map<int,int> tmpChecker = check;
+		for(shared_ptr<BinaryNode> node : path){
+			int i = node -> content;
+			if(tmpChecker.find(i) != tmpChecker.end()){
+				tmpChecker.at(i)--;
+				if(tmpChecker.at(i) == 0) tmpChecker.erase(i);
+			}else{
+				return false;
+			}
+		}
+		return true;
+	}
+	void printBSTSequences(TrackList& tList){
+		for(shared_ptr<BinaryNode> child: tList.adjacentNodes){
+			TrackList newTList = tList;
+			if(newTList.addAdjacentNode(child)) continue;
+			else printBSTSequences(newTList);
+		}
+	}
+	void printBSTSequences(){
+		TrackList tList = TrackList(bst.size);
+		tList.addAdjacentNode(root);
+		printBSTSequences(tList);
+	}
+};
+int main(){
+	BinarySearchTree bst = BinarySearchTree();
+	bst.insert(26);
+	bst.insert(24);
+	bst.insert(29);
+	bst.insert(25);
+	bst.insert(23);
+	BSTSequences seq = BSTSequences(bst);
+	seq.printBSTSequences();
+}
+
+
