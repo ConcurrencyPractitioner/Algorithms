@@ -1,0 +1,65 @@
+// Example program
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+class MaxSumSubmatrix{
+public:
+    template <int size>
+    int maxSumSubsequence(int (&array)[size]){
+        int sum = 0;
+        int bestSum = 0;
+        for(int i = 0; i < size; i++){
+            sum += array[i];
+            if(sum < 0) sum = 0;
+            if(bestSum < sum) bestSum = sum;
+        }
+        return bestSum;
+    }
+    template <int rows, int cols>
+    void computeColumns(int (&matrix)[rows][cols], int (&columns)[cols][rows][rows]){
+        for(int c = 0; c < cols; c++){
+            for(int r = 0; r < rows; r++){
+                int sum = 0;
+                for(int i = r; i < rows; i++){
+                    sum += matrix[i][c];
+                    columns[c][r][i] = sum;
+                }
+            }
+        }
+    }
+    template <int rows, int cols>
+    int maxMatrix(int (&matrix)[rows][cols]){
+        int colSummation[cols][rows][rows];
+        computeColumns<rows, cols>(matrix, colSummation);
+        int bestResult = 0;
+        for(int r = 0; r < rows; r++){
+            for(int height = 0; height <= r; height++){
+                int sequence[cols];
+                for(int i = 0; i < cols; i++){
+                    sequence[i] = colSummation[i][r-height][r];
+                    int diff = r-height;
+                    cout << "Location: (" << i << "," << diff << "," << r << ") " << 
+                        "Sum: " << colSummation[i][r-height][r] << endl;
+                }
+                for(int i = 0; i < cols; i++){
+                    cout << sequence[i] << " ";
+                }
+                cout << endl;
+                int bestSumForSequence = maxSumSubsequence<cols>(sequence);
+                if(bestResult < bestSumForSequence) bestResult = bestSumForSequence;
+            }
+        }
+        return bestResult;
+    }
+};
+int main(){
+    int array[3][6] = {
+        {2, -1, 4, 5, -8, 9},
+        {-3, 6, 8, -15, -12, 17},
+        {7, -8, -9, 12, 19, -16}
+    };
+    MaxSumSubmatrix functionClass;
+    cout << "Result: " << functionClass.maxMatrix<3,6>(array) << endl;
+}
