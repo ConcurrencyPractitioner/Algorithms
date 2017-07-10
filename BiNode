@@ -39,6 +39,22 @@ public:
 			}
 		}
 	}
+	shared_ptr<BinaryNode> node(int i){
+		if(i == content) return this;
+		if(i < content){
+			if(left != nullptr){
+				left ->node(i);
+			}else{
+				return nullptr;
+			}
+		}else{
+			if(right != nullptr){
+				right -> node(i);
+			}else{
+				return nullptr;
+			}
+		}
+	}
 };
 class BinarySearchTree{
 public:
@@ -51,6 +67,9 @@ public:
 		size++;
 		if(root == nullptr) root = std::make_shared<BinaryNode>(i);
 		else root -> insert(i);
+	}
+	shared_ptr<BinaryNode> node(int i){
+		return root -> node(i);
 	}
 };
 class BSTConversion{
