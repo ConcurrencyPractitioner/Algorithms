@@ -1,0 +1,91 @@
+/* 17.12 CRACKING the CODING INTERVIEW Sixth Edition
+* pg. 188 BiNode
+*/
+// Example program
+#include <iostream>
+#include <string>
+#include <memory>
+#include <vector>
+#include <algorithm>
+#include <map>
+#include <list>
+
+using namespace std;
+
+class BinaryNode{
+public:
+	shared_ptr<BinaryNode> left;
+	shared_ptr<BinaryNode> right;
+	int content;
+	BinaryNode(int c):content(c), left(nullptr), right(nullptr){}
+	void setLeft(shared_ptr<BinaryNode> l){
+		left = l;
+	}
+	void setRight(shared_ptr<BinaryNode> r){
+		right = r;
+	}
+	void insert(int i){
+		if(i <= content){
+			if(left != nullptr){
+				left ->insert(i);
+			}else{
+				left = std::make_shared<BinaryNode>(i);
+			}
+		}else{
+			if(right != nullptr){
+				right -> insert(i);
+			}else{
+				right = std::make_shared<BinaryNode>(i);
+			}
+		}
+	}
+};
+class BinarySearchTree{
+public:
+	shared_ptr<BinaryNode> root;
+	vector<int> list;
+	BinarySearchTree():root(nullptr){}
+	int size = 0;
+	void insert(int i){
+		list.emplace_back(i);
+		size++;
+		if(root == nullptr) root = std::make_shared<BinaryNode>(i);
+		else root -> insert(i);
+	}
+};
+class BSTConversion{
+public:
+    list<int> result;
+    shared_ptr<BinaryNode> root;
+    BSTConversion(BinarySearchTree bst):root(bst.root){}
+    list<int> convertBST(){
+        convertBST(root);
+        return result;
+    }
+    void convertBST(shared_ptr<BinaryNode> currNode){
+        cout << currNode->content << " ";
+        if(currNode -> left != nullptr){
+            convertBST(currNode -> left);
+        }
+        result.push_back(currNode -> content);
+        if(currNode -> right != nullptr){
+            convertBST(currNode -> right);
+        }
+    }
+};
+int main(){
+    BinarySearchTree bst = BinarySearchTree();
+	bst.insert(4);
+	bst.insert(2);
+	bst.insert(1);
+	bst.insert(3);
+	bst.insert(0);
+	bst.insert(5);
+	bst.insert(6);
+	BSTConversion conv = BSTConversion(bst);
+	cout << "List: ";
+	for(int i: conv.convertBST()){
+	    cout << i << " ";
+	}
+	cout << endl;
+}
