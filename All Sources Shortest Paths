@@ -1,0 +1,149 @@
+//All sources, shortest path algorithm
+#include <string>
+#include <map>
+#include <memory>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class WeightedGraphNode{
+public:
+	double id;
+	map<double, shared_ptr<WeightedGraphNode>> adjacentNodes;
+	map<shared_ptr<WeightedGraphNode>, double> weights;
+	WeightedGraphNode(double i):id(i){}
+	void addWeightedGraphNode(shared_ptr<WeightedGraphNode> node, double weight){
+		weights.emplace(node, weight);
+		adjacentNodes.emplace(node -> id, node);
+	}
+	shared_ptr<WeightedGraphNode> adjacentNode(double id){
+		return adjacentNodes.find(id) != adjacentNodes.end() ?
+				adjacentNodes.at(id) : nullptr;
+	}
+	double getWeight(double id){
+		return getWeight(adjacentNode(id));
+	}
+	double getWeight(shared_ptr<WeightedGraphNode> node){
+		if(node == nullptr) return 0x1.fffffffffffffP+1023;
+		return weights.at(node);
+	}
+	friend bool operator<(const shared_ptr<WeightedGraphNode>& node1,
+			const shared_ptr<WeightedGraphNode>& node2){
+		return node1 -> id < node2 -> id;
+	}
+};
+class WeightedGraph{
+public:
+	map<double, shared_ptr<WeightedGraphNode>> nodes;
+	void addNode(double id){
+		nodes.emplace(id, std::make_shared<WeightedGraphNode>(id));
+	}
+	shared_ptr<WeightedGraphNode> node(double id){
+		return nodes.find(id) != nodes.end() ? nodes.at(id) : nullptr;
+	}
+	double getWeight(double id1, double id2){
+	    if(id1 == id2) return 0.0;
+		return nodes.find(id1) != nodes.end() && nodes.find(id2) != nodes.end() ?
+				nodes.at(id1) -> getWeight(id2) : 0x1.fffffffffffffP+1023;
+	}
+	void addWeightedEdge(double id1, double id2, double weight){
+		if(nodes.find(id1) == nodes.end() || nodes.find(id2) == nodes.end()) return;
+		nodes.at(id1) -> addWeightedGraphNode(nodes.at(id2), weight);
+	}
+};
+template <unsigned long size>
+class AllSourcesShortestPath{
+public:
+    WeightedGraph graph;
+    map<shared_ptr<WeightedGraphNode>, unsigned long> indexes;
+    double predArray[size][size];
+    double currArray[size][size];
+    AllSourcesShortestPath(WeightedGraph g):graph(g){
+    }
+    void extendsShortestPaths(double (&array)[size][size]){
+        for(unsigned long i = 0; i < size; i++){
+            for(unsigned long j = 0; j < size; j++){
+                currArray[i][j] = 0x1.fffffffffffffP+1023;
+                for(int k = 0; k < size; k++){
+                    double weight = array[i][k] + predArray[k][j];
+                    currArray[i][j] =  currArray[i][j] < weight ? currArray[i][j] : weight;
+                }
+            }
+        }
+    }
+    void copyArray(){
+        for(unsigned long r = 0; r < size; r++){
+            for(unsigned long c = 0; c < size; c++){
+                predArray[r][c] = currArray[r][c];
+            }
+        }
+    }
+    auto allSourcesShortestPath(){
+        unsigned long index = 0;
+        for(auto it = graph.nodes.begin(); it != graph.nodes.end(); it++){
+            indexes.emplace(it->second, index);
+            index++;
+        }
+        for(auto it = graph.nodes.begin(); it != graph.nodes.end(); it++){
+            for(auto it2 = graph.nodes.begin(); it2 != graph.nodes.end(); it2++){
+                predArray[indexes.at(it -> second)][indexes.at(it2 -> second)] = 
+                    graph.getWeight(it -> first, it2 -> first);
+            }
+        }
+        unsigned long state = 1;
+        while(state < graph.nodes.size() - 1){
+            extendsShortestPaths(predArray);
+            copyArray();
+            state <<= 1;
+        }
+        for(unsigned long r = 0; r < size; r++){
+            for(unsigned long c = 0; c < size; c++){
+                cout << predArray[r][c] << " ";
+            }
+            cout << endl;
+        }
+        return currArray;
+    }
+};
+int main(){
+    WeightedGraph g = WeightedGraph();
+    g.addNode(0);
+    g.addNode(1);
+    g.addNode(2);
+    g.addNode(3);
+    g.addNode(4);
+    g.addNode(5);
+    g.addNode(6);
+    g.addNode(7);
+    g.addNode(8);
+    g.addNode(9);
+    g.addNode(10);
+    g.addWeightedEdge(0,1,4);
+    g.addWeightedEdge(0,3,3);
+    g.addWeightedEdge(2,0,-6);
+    g.addWeightedEdge(8,0,-6);
+    g.addWeightedEdge(7,0,12);
+    g.addWeightedEdge(1,2,8);
+    g.addWeightedEdge(4,1, 16);
+    g.addWeightedEdge(8,2,12);
+    g.addWeightedEdge(6,2,-8);
+    g.addWeightedEdge(7,2,-17);
+    g.addWeightedEdge(8,3,-16);
+    g.addWeightedEdge(3,9,24);
+    g.addWeightedEdge(9,4,12);
+    g.addWeightedEdge(10,4,-19);
+    g.addWeightedEdge(4,8,20);
+    g.addWeightedEdge(4,11,36);
+    g.addWeightedEdge(11,5,-12);
+    g.addWeightedEdge(5,8,13);
+    g.addWeightedEdge(6,5,8);
+    g.addWeightedEdge(8,6,-9);
+    g.addWeightedEdge(6,7,5);
+    g.addWeightedEdge(11,8,14);
+    g.addWeightedEdge(9,10,8);
+    g.addWeightedEdge(11,10,-13);
+    AllSourcesShortestPath<11> cycle = AllSourcesShortestPath<11>(g);
+    cycle.allSourcesShortestPath();
+}
