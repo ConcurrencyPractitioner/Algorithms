@@ -1,0 +1,56 @@
+//Print all permutations of a string with duplicate characters
+//No same permutation allowed to be printed more than once.
+#include <iostream>
+#include <string>
+#include <map>
+#include <list>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+class CharCount{
+public:
+    char character;
+    long count;
+    CharCount(char c, long app):character(c), count(app){}
+};
+class PermutationsWithDup{
+public:
+    string input;
+    vector<CharCount> listOfCharCounts;
+    PermutationsWithDup(string str):input(str){}
+    void generateAllPermutations(string output, vector<CharCount> currList){
+        if(output.size() == input.size()){
+            cout << output << endl;
+            return;
+        }
+        for(unsigned long i = 0; i < currList.size(); i++){
+            string newOutput = output;
+            vector<CharCount> newList = currList;
+            newOutput += newList.at(i).character;
+            newList.at(i).count -= 1;
+            if(newList.at(i).count == 0) newList.erase(newList.begin() + i);
+            generateAllPermutations(newOutput, newList);
+        }
+    }
+    void printAllPermutations(){
+        map<char, long> charTracker;
+        for(unsigned long i = 0; i < input.size(); i++){
+            if(charTracker.find(input.at(i)) == charTracker.end()){
+                charTracker.emplace(input.at(i), 1);
+            }else{
+                charTracker.at(input.at(i)) += 1;
+            }
+        }
+        for(auto it = charTracker.begin(); it != charTracker.end(); it++){
+            listOfCharCounts.emplace_back(CharCount(it -> first, it -> second));
+        }
+        string output = "";
+        generateAllPermutations(output, listOfCharCounts);
+    }
+};
+int main(){
+    PermutationsWithDup per = PermutationsWithDup("bobbbbbbbbb");
+    per.printAllPermutations();
+}
