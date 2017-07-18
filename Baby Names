@@ -1,0 +1,124 @@
+/* Baby Names: Each year, the government releases a list of 10000 most common baby names
+ * and their frequencies (the number of babies with that name). The only problem with this is that
+ * some names have multiple spellings. For example "John" and "Jon" are essential the same name
+ * but would be listed seperately in the list. Given two lists, one of names/frequences and the other
+ * of pairs of equivalent names, write an algorithm to print a new list of the true frequencyt of 
+ * each name. (Cracking the Coding Interview 3rd Edition 17.7 BabyNames)
+*/
+#include <iostream>
+#include <string>
+#include <map>
+#include <list>
+#include <algorithm>
+#include <memory>
+
+using namespace std;
+
+class StringNode{
+    public:
+        string name;
+        int count;
+        list<shared_ptr<StringNode>> adjacents;
+        bool visited;
+        StringNode(string s, int c):name(s),count(c),visited(false){}
+        void addAdjacent(shared_ptr<StringNode> adjacentNode){
+            adjacents.push_back(adjacentNode);
+        }
+};
+class StringPair{
+    public:
+        string name1;
+        string name2;
+        StringPair(string s1, string s2):name1(s1), name2(s2){}
+};
+class StringCount{
+    public:
+        string name;
+        int count;
+        StringCount(string n, int c):name(n), count(c){}
+};
+class BabyNames{
+    public:
+        list<StringPair> pairs;
+        list<StringCount> nameCount;
+        list<shared_ptr<StringNode>> nameTable;
+        map<string, shared_ptr<StringNode>> stringNodeMap;
+        BabyNames(list<StringCount> nC, list<StringPair> p):pairs(p), nameCount(nC){
+            for(StringCount stringC: nameCount){
+                shared_ptr<StringNode> d = std::make_shared<StringNode>(stringC.name, stringC.count);
+                stringNodeMap.emplace(stringC.name, d);
+                nameTable.push_back(d);
+            }
+            for(StringPair pair: pairs){
+                shared_ptr<StringNode> p1 = stringNodeMap.at(pair.name1);
+                shared_ptr<StringNode> p2 = stringNodeMap.at(pair.name2);
+                p1 -> addAdjacent(p2);
+                p2 -> addAdjacent(p1);
+            }
+        }
+        int visit(shared_ptr<StringNode> node){
+            int count = 0;
+            list<shared_ptr<StringNode>> adjacentNodes;
+            adjacentNodes.push_back(node);
+            while(!adjacentNodes.empty()){
+                int size = adjacentNodes.size();
+                for(int i = 0; i < size; i++){
+                    shared_ptr<StringNode> currNode = adjacentNodes.front();
+                    currNode -> visited = true;
+                    count += currNode -> count;
+                    adjacentNodes.pop_front();
+                    for(shared_ptr<StringNode> adjacent: currNode -> adjacents){
+                        if(adjacent -> visited == false){
+                            adjacentNodes.push_back(adjacent);
+                        }
+                    }
+                }
+            }
+            return count;
+        }
+        list<StringCount> simplify(){
+            list<StringCount> result;
+            for(shared_ptr<StringNode> node: nameTable){
+                if(node -> visited == false){
+                    int count = visit(node);
+                    StringCount strC = StringCount(node -> name, count);
+                    result.push_back(strC);
+                }
+            }
+            return result;
+        }
+};
+ostream & operator<<(ostream & fout, list<StringCount> stringCountList){
+    for(StringCount sC: stringCountList){
+        fout << sC.name << ": " << sC.count << endl; 
+    }
+    return fout;
+}
+int main(){
+//Input: 
+//  Names: John(15), Jon(12), Chris(13), Kris(4), Christopher(19)
+//  Synonyms: (John, Jon), (Chris, Kris), (Chris, Christopher)
+//Output: John(27), Kris(36) 
+//Note that names printed could be any one of the synonyms.
+    StringCount sC1 = StringCount("John", 15);
+    StringCount sC2 = StringCount("Jon", 12);
+    StringCount sC3 = StringCount("Chris", 13);
+    StringCount sC4 = StringCount("Kris", 4);
+    StringCount sC5 = StringCount("Christopher", 19);
+    StringPair pair1 = StringPair(sC1.name, sC2.name);
+    StringPair pair2 = StringPair(sC3.name, sC4.name);
+    StringPair pair3 = StringPair(sC3.name, sC5.name);
+    list<StringCount> stringCountList;
+    stringCountList.push_back(sC1);
+    stringCountList.push_back(sC2);
+    stringCountList.push_back(sC3);
+    stringCountList.push_back(sC4);
+    stringCountList.push_back(sC5);
+    list<StringPair> stringPairList;
+    stringPairList.push_back(pair1);
+    stringPairList.push_back(pair2);
+    stringPairList.push_back(pair3);
+    BabyNames babyNames = BabyNames(stringCountList, stringPairList);
+    list<StringCount> result = babyNames.simplify();
+    cout << result << endl;
+}
