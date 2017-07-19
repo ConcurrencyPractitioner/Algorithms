@@ -1,0 +1,93 @@
+//C++ implementation of Least Recently Used Cache (LRUCache)
+//16.25 Cracking the Coding Interview 3rd Edition
+#include <iostream>
+#include <memory>
+#include <map>
+
+using namespace std;
+
+template <typename K, typename V>
+class LRUCacheNode{
+    public:
+        shared_ptr<LRUCacheNode<K,V>> prev;
+        shared_ptr<LRUCacheNode<K,V>> next;
+        K key;
+        V val;
+        LRUCacheNode(K k, V v):key(k), val(v),
+            prev(nullptr), next(nullptr){}
+};
+template <typename K, typename V>
+class LRUCache{
+    public:
+        long maxSize;
+        shared_ptr<LRUCacheNode<K,V>> mostRecentlyUsed;
+        shared_ptr<LRUCacheNode<K,V>> leastRecentlyUsed;
+        map<K, shared_ptr<LRUCacheNode<K,V>>> hashTable;
+        LRUCache(long size):maxSize(size),
+            mostRecentlyUsed(nullptr), leastRecentlyUsed(nullptr){}
+        void addNodeToHead(K key, V value){
+            if(hashTable.size() == maxSize) evictTail();
+            shared_ptr<LRUCacheNode<K,V>>  currNode = std::make_shared<LRUCacheNode<K,V>>(key, value);
+            if(mostRecentlyUsed == nullptr){
+                mostRecentlyUsed = currNode;
+                leastRecentlyUsed = currNode;
+                return;
+            }
+            auto it = hashTable.find(key);
+            if(it != hashTable.end()){
+                removeNode(it -> second);
+                it -> second = currNode;
+            }else hashTable.emplace(key, currNode);
+            currNode -> prev = mostRecentlyUsed;
+            mostRecentlyUsed -> next = currNode;
+            mostRecentlyUsed = currNode;
+        }
+        void deleteKey(K key){
+            if(hashTable.find(key) == hashTable.end()) return;
+            removeNode(hashTable.at(key));
+            hashTable.erase(key);
+        }
+        void emplace(K key, V value){
+            addNodeToHead(key, value);
+        }
+        void evictTail(){
+            hashTable.erase(leastRecentlyUsed -> key);
+            leastRecentlyUsed -> next -> prev = nullptr;
+            leastRecentlyUsed = leastRecentlyUsed -> next;
+        }
+        V at(K key){
+            auto it = hashTable.find(key);
+            if(it == hashTable.end()) return V();
+            moveNodeToHead(it -> second);
+            return it -> second -> val;
+        }
+        void moveNodeToHead(shared_ptr<LRUCacheNode<K,V>> node){
+            if(node == mostRecentlyUsed) return;
+            removeNode(node);
+            node -> next = nullptr;
+            node -> prev = mostRecentlyUsed;
+            mostRecentlyUsed -> next = node;
+            mostRecentlyUsed = node;
+        }
+        void moveNodeToHead(K key){
+            if(hashTable.find(key) != hashTable.end()) moveNodeToHead(hashTable.at(key));
+        }
+        void removeNode(shared_ptr<LRUCacheNode<K,V>> node){
+            if(node == leastRecentlyUsed) leastRecentlyUsed = node -> next;
+            if(node -> prev != nullptr) node -> prev -> next = node -> next;
+            if(node -> next != nullptr) node -> next -> prev = node -> prev;
+            if(node == mostRecentlyUsed){
+                mostRecentlyUsed = node -> prev;
+            }
+        }
+        long size(){return hashTable.size();}
+};
+int main(){
+    LRUCache<int,int> cache = LRUCache<int,int>(3);
+    cache.emplace(1,4);
+    cache.emplace(2,6);
+    cache.emplace(3,9);
+    cache.emplace(9,12);
+    cout << "No exception occurred" << endl;
+    cout << "Current cache size: " << cache.size() << endl;
+}
