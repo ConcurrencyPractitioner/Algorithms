@@ -1,0 +1,87 @@
+#include <iostream>
+#include <memory>
+#include <map>
+
+using namespace std;
+
+template <typename K, typename V>
+class LRUCacheNode{
+    public:
+        shared_ptr<LRUCacheNode<K,V>> prev;
+        shared_ptr<LRUCacheNode<K,V>> next;
+        K key;
+        V val;
+        LRUCacheNode(K k, V v):key(k), val(v),
+            prev(nullptr), next(nullptr){}
+};
+template <typename K, typename V>
+class LRUCache{
+    public:
+        long maxSize;
+        shared_ptr<LRUCacheNode<K,V>> mostRecentlyUsed;
+        shared_ptr<LRUCacheNode<K,V>> leastRecentlyUsed;
+        map<K, shared_ptr<LRUCacheNode<K,V>>> hashTable;
+        LRUCache(long size):maxSize(size),
+            mostRecentlyUsed(nullptr), leastRecentlyUsed(nullptr){}
+        //Get value for key and mark as most recently used
+        V getValue(K key){
+            auto item = hashTable.find(key);
+            if(item == hashTable.end()) return V();
+            //Move to the front of the list
+            if(item -> second != mostRecentlyUsed){
+                removeFromLinkedList(item -> second);
+                insertAtFrontOfLinkedList(item -> second);
+            }
+            return item -> second -> val;
+        }
+        //Remove node from linked list
+        void removeFromLinkedList(shared_ptr<LRUCacheNode<K,V>> node){
+            if(node == nullptr) return;
+            if(node -> prev != nullptr) node -> prev -> next = node -> next;
+            if(node -> next != nullptr) node -> next -> prev = node -> prev;
+            if(node == leastRecentlyUsed) leastRecentlyUsed = node -> prev;
+            if(node == mostRecentlyUsed) mostRecentlyUsed = node -> next;
+        }
+        //Insert node at front of linked list
+        void insertAtFrontOfLinkedList(shared_ptr<LRUCacheNode<K,V>> node){
+            if(mostRecentlyUsed == nullptr){
+                mostRecentlyUsed = node;
+                leastRecentlyUsed = node;
+            }else{
+                mostRecentlyUsed -> prev = node;
+                node -> next = mostRecentlyUsed;
+                mostRecentlyUsed = node;
+            }
+        }
+        //Remove key/value pair from cache, deleting the hashTable and linkedList
+        bool removeKey(K key){
+            if(hashTable.find(key) == hashTable.end()) return false;
+            shared_ptr<LRUCacheNode<K,V>> node = hashTable.at(key);
+            removeFromLinkedList(node);
+            hashTable.erase(key);
+            return true;
+        }
+        //put key, value pair in to cache. Removes old value 
+        //if circumstances are right. INserts pair into linkedList and
+        //hashTable
+        void emplace(K key, V value){
+            removeKey(key);
+            if(hashTable.size() >= maxSize && leastRecentlyUsed != nullptr){
+                removeKey(leastRecentlyUsed -> key);
+            }
+            shared_ptr<LRUCacheNode<K,V>> node = std::make_shared<LRUCacheNode<K,V>>(key, value);
+            insertAtFrontOfLinkedList(node);
+            hashTable.emplace(key, node);
+        }
+        long size(){return hashTable.size();}
+};
+int main(){
+    LRUCache<int,int> cache = LRUCache<int,int>(3);
+    cache.emplace(1,4);
+    cache.emplace(2,6);
+    cache.emplace(3,9);
+    cache.emplace(3,6);
+    cache.emplace(4,7);
+    cout << "Current cache size: " << cache.size() << endl;
+    cout << cache.getValue(4) << endl;
+}
