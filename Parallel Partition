@@ -1,0 +1,52 @@
+#include <iostream>
+#include <string>
+#include <thread>
+#include <future>
+#include <vector>
+
+using namespace std;
+
+template <typename K>
+class PartitionTuple{
+    public:
+        vector<K> partitionedElements;
+        int index;
+        PartitionTuple(int size){
+            partitionedElements.reserve(size);
+        }
+};
+template <typename K>
+class ParallelPartition{
+    public:
+        vector<K> elements;
+        K partitionElement;
+        int recordedIndex;
+        ParallelPartition(vector<K>& e, int index):elements(e), recordedIndex(index){
+            partitionElement = elements.at(recordedIndex);
+        }
+        int merge(int low, int high, int firstPivot, int secondPivot){
+            int marginalLowerBound = elements.at(firstPivot) < partitionElement ? firstPivot : firstPivot - 1;
+            int marginalHigherBound = elements.at(secondPivot) < partitionElement ? secondPivot : secondPivot - 1;
+            int mid = (low + high)/2;
+            vector<K> lowerElements;
+            lowerElements.reserve(marginalHigherBound - mid);
+            lowerElements.insert(lowerElements.begin(), elements.begin() + mid + 1, elements.begin() + marginalHigherBound + 1);
+            elements.erase(elements.begin() + mid + 1, elements.begin() + marginalHigherBound + 1);
+            elements.insert(elements.begin() + marginalHigherBound + 1, lowerElements.begin(), lowerElements.end());
+            return marginalHigherBound + lowerElements.size();
+        }
+        int parallelPartition(int left, int right){
+            int index = right - left + 1;
+            if(index == 1){
+                return left;
+            }else{
+                int mid = (left + right)/2;
+                auto firstHalf = std::async(parallelPartition(left, mid));
+                auto secondHalf = std::async(parallelPartition(mid + 1, right));
+                int firstHalfIndex = firstHalf.get();
+                int secondHalfIndex = secondHalf.get();
+                int pivotAfterMerge = merge(left, right, firstHalfIndex, secondHalfIndex);
+                return pivotAfterMerge;
+            }
+        }
+};
