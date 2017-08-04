@@ -1,0 +1,183 @@
+//Cracking the Coding Interview 6th Edition 17.25
+#include <iostream>
+#include <string>
+#include <list>
+#include <map>
+#include <memory>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+class TrieNode{
+    public:
+        char character;
+        int position;
+        map<char,shared_ptr<TrieNode>> children;
+        TrieNode(char c, int index):character(c), position(index),
+        		children(map<char,shared_ptr<TrieNode>>()){
+        }
+        void addString(std::string str, int startingIndex){
+            shared_ptr<TrieNode> curr = nullptr;
+            shared_ptr<TrieNode> next = this -> getChild(str.at(0));
+            if(next == nullptr){
+                shared_ptr<TrieNode> child = std::make_shared<TrieNode>(str.at(0), startingIndex);
+                children.emplace(str.at(0), child);
+            }
+            curr = this -> getChild(str.at(0));
+            for(unsigned int i = 1; i < str.size(); i++){
+                next = curr -> getChild(str.at(i));
+                if(next == nullptr){
+                    shared_ptr<TrieNode> child = std::make_shared<TrieNode>(str.at(i),
+                    		startingIndex + i);
+                    curr -> children.emplace(str.at(i), child);
+                }
+                curr = curr -> getChild(str.at(i));
+            }
+        }
+        shared_ptr<TrieNode> getChild(char c){
+            if(children.find(c) == children.end()) return nullptr;
+            return children.at(c);
+        }
+};
+class Trie{
+	public:
+		TrieNode root;
+		Trie():root(TrieNode(' ', 0)){}
+		void addString(std::string str){
+			for(int i = 0; i < str.size();i++){
+				root.addString(str.substr(i), i);
+			}
+		}
+		bool containsString(std::string str){
+			shared_ptr<TrieNode> curr = root.getChild(str.at(0));
+			for(int i = 1; i < str.size(); i++){
+				if(curr == nullptr) return false;
+				curr = curr -> getChild(str.at(i));
+			}
+			if(curr == nullptr) return false;
+			return true;
+		}
+};
+class ExpandableMatrix{
+    public:
+        list<string> matrix;
+        list<shared_ptr<TrieNode>> terminationNodes;
+        Trie trie;
+        ExpandableMatrix(Trie t):trie(t){
+        }
+        ExpandableMatrix(const ExpandableMatrix& mat):trie(mat.trie), 
+            matrix(mat.matrix), terminationNodes(mat.terminationNodes){}
+        bool addString(string str){
+            if(matrix.empty()){
+                for(int i = 0; i < str.size(); i++){
+                    shared_ptr<TrieNode> child = trie.root.getChild(str.at(i));
+                    if(child == nullptr){
+                        terminationNodes.clear();
+                        return false;
+                    }
+                    else terminationNodes.push_back(child);
+                }
+                matrix.push_back(str);
+                return true;
+            }else if(str.size() == terminationNodes.size()){
+                for(int i = 0; i < terminationNodes.size(); i++){
+                    if(terminationNodes.front() -> getChild(str.at(i)) == nullptr) return false;
+                    shared_ptr<TrieNode> head = terminationNodes.front();
+                    terminationNodes.pop_front();
+                    terminationNodes.push_back(head);
+                }
+                for(int i = 0; i < terminationNodes.size(); i++){
+                    shared_ptr<TrieNode> head = terminationNodes.front();
+                    terminationNodes.pop_front();
+                    head = head -> getChild(str.at(i));
+                    terminationNodes.push_back(head);
+                }
+                matrix.push_back(str);
+                return true;
+            }else return false;
+        }
+};
+class WordRectangle{
+    public:
+        list<string> dictionary;
+        map<int, list<string>> dictSortedByLength;
+        ExpandableMatrix result;
+        Trie trie;
+        WordRectangle(list<string> dict):dictionary(dict), result(convertToTrie(dictionary)){
+            trie = convertToTrie(dictionary);
+            list<string> tmpDictionary = dictionary;
+            while(!tmpDictionary.empty()){
+                string curr = tmpDictionary.front();
+                tmpDictionary.pop_front();
+                auto it = dictSortedByLength.find(curr.size());
+                if(it == dictSortedByLength.end()){
+                    list<string> newList;
+                    newList.push_back(curr);
+                    dictSortedByLength.emplace(curr.size(), newList); 
+                }else{
+                    it -> second.push_back(curr);
+                }
+            }
+        }
+        Trie convertToTrie(list<string> dict){
+            Trie t = Trie();
+            for(string s: dict) t.addString(s);
+            return t;
+        }
+        bool containsString(string& str){
+            bool result = false;
+            for(string s: dictionary){
+                if(s == str) result = true;
+            }
+            return result;
+        }
+        bool isValidMatrix(ExpandableMatrix& matrix){
+            vector<string> verticalStrings;
+            for(int i = 0; i < matrix.matrix.front().size(); i++) verticalStrings.emplace_back("");
+            for(string str : matrix.matrix){
+                for(int i = 0; i < str.size(); i++){
+                    verticalStrings.at(i) += str.at(i);
+                }
+            }
+            for(string str: verticalStrings){
+                if(!containsString(str)) return false;
+            }
+            return true;
+        }
+        void findBestMatrix(ExpandableMatrix& matrix, list<string> input){
+            for(int i = 0; i < input.size(); i++){
+                ExpandableMatrix holderMatrix = matrix;
+                if(holderMatrix.addString(input.front())){
+                    if(isValidMatrix(holderMatrix)){
+                        int resultArea = result.matrix.size() == 0 ? 0 :
+                            result.matrix.size() * result.matrix.front().size();
+                        int holderMatrixArea = holderMatrix.matrix.size() * holderMatrix.matrix.front().size();
+                        if(resultArea < holderMatrixArea){
+                            result = holderMatrix;
+                        }
+                    }
+                    string stringAdded = input.front();
+                    input.pop_front();
+                    findBestMatrix(holderMatrix, input);
+                    input.push_back(stringAdded);
+                }
+            }
+        }
+        ExpandableMatrix findLargestRectangle(){
+            int bestArea = 0;
+            ExpandableMatrix currMatrix = ExpandableMatrix(trie);
+            for(auto it = dictSortedByLength.begin(); it != dictSortedByLength.end(); it++){
+                findBestMatrix(currMatrix, it -> second);
+            }
+            for(string str: result.matrix){
+                cout << str << endl;
+            }
+            return result;
+        }
+};
+int main(){
+    list<string> listOfStrings = {"abs","cat", "dog", "cake", "late", "fate", "bait", "bite", "acd", "bao", "stg"};
+    WordRectangle rectangle = WordRectangle(listOfStrings);
+    rectangle.findLargestRectangle();
+}
