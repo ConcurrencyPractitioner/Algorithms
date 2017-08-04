@@ -1,0 +1,127 @@
+//Cracking the Coding interview 17.15
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <memory>
+
+using namespace std;
+
+class StringLengthTuple{
+    public:
+        int length;
+        string str;
+        StringLengthTuple(string s):str(s), length(s.size()){}
+        bool operator<(StringLengthTuple tuple){
+            return length < tuple.length ? true : str < tuple.str;
+        }
+};
+class TrieNode{
+    public:
+        char character;
+        int position;
+        map<char,shared_ptr<TrieNode>> children;
+        TrieNode(char c, int index):character(c), position(index),
+        		children(map<char,shared_ptr<TrieNode>>()){
+        }
+        void addString(std::string str, int startingIndex){
+            shared_ptr<TrieNode> curr = nullptr;
+            shared_ptr<TrieNode> next = this -> getChild(str.at(0));
+            if(next == nullptr){
+                shared_ptr<TrieNode> child = std::make_shared<TrieNode>(str.at(0), startingIndex);
+                children.emplace(str.at(0), child);
+            }
+            curr = this -> getChild(str.at(0));
+            for(unsigned int i = 1; i < str.size(); i++){
+                next = curr -> getChild(str.at(i));
+                if(next == nullptr){
+                    shared_ptr<TrieNode> child = std::make_shared<TrieNode>(str.at(i),
+                    		startingIndex + i);
+                    curr -> children.emplace(str.at(i), child);
+                }
+                curr = curr -> getChild(str.at(i));
+            }
+        }
+        shared_ptr<TrieNode> getChild(char c){
+            if(children.find(c) == children.end()) return nullptr;
+            return children.at(c);
+        }
+};
+class Trie{
+	public:
+		TrieNode root;
+		Trie():root(TrieNode(' ', 0)){}
+		void addString(std::string str){
+			for(int i = 0; i < str.size();i++){
+				root.addString(str.substr(i), i);
+			}
+		}
+		bool containsString(std::string str){
+			shared_ptr<TrieNode> curr = root.getChild(str.at(0));
+			for(int i = 1; i < str.size(); i++){
+				if(curr == nullptr) return false;
+				curr = curr -> getChild(str.at(i));
+			}
+			if(curr == nullptr) return false;
+			return true;
+		}
+};
+class LongestWord{
+    public:
+        vector<string> dict;
+        vector<StringLengthTuple> dictSortedByLength;
+        map<int, Trie> wordVerificationTree; 
+        LongestWord(vector<string> dictionary):dict(dictionary){
+            for(string s: dict){
+                StringLengthTuple t = StringLengthTuple(s);
+                dictSortedByLength.emplace_back(t);
+            }
+            std::sort(dictSortedByLength.begin(), dictSortedByLength.end());
+            int currentLength = dictSortedByLength.at(0).length;
+            Trie t = Trie();
+            for(int i = 0; i < dictSortedByLength.size(); i++){
+                if(currentLength != dictSortedByLength.at(i).length){
+                    wordVerificationTree.emplace(currentLength, t);
+                    t = Trie();
+                    currentLength = dictSortedByLength.at(i).length;
+                }
+                t.addString(dictSortedByLength.at(i).str);
+            }
+            auto it = wordVerificationTree.find(currentLength);
+            if(it == wordVerificationTree.end()){
+                wordVerificationTree.emplace(currentLength, t);
+            }
+        }
+        bool isValidWord(string s, int startIndex, int endIndex){
+            if(endIndex - startIndex == s.size() - 1) return false;
+            
+            bool validWord = false;
+            if(wordVerificationTree.find(endIndex - startIndex + 1) != wordVerificationTree.end()){
+                validWord = wordVerificationTree.at(endIndex - startIndex + 1).containsString(s.substr(startIndex, endIndex + 1));
+            }
+            
+            if(endIndex == s.size() - 1){
+                if(validWord) return false;
+                else return true;
+            }
+            
+            bool b1 = false, b2 = false;
+            if(validWord){
+                b1 = isValidWord(s, endIndex + 1, endIndex + 1);
+            }
+            b2 = isValidWord(s, startIndex, endIndex + 1);
+            return (b1 || b2);
+        }
+        string findLongestWord(){
+            for(int i = dictSortedByLength.size() - 1; i >= 0; i--){
+                if(isValidWord(dictSortedByLength.at(i).str, 0, 0)) return dictSortedByLength.at(i).str;
+            }
+            return "";
+        }
+};
+int main(){
+  vector<string> dict = {"cat", "dog", "walk", "walker", "banana", "nana", "dogwalker"};
+  LongestWord lWord = LongestWord(dict);
+  cout << lWord.findLongestWord();
+}
