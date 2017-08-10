@@ -1,0 +1,171 @@
+#include <map>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+/*15-8 Image Compression by Seam Carving
+ *We are given a color picture consisting of an m by n array of intensity pixels, 
+ *where each pixel specifies a triple of red, green, and blue (RGB) intensities. 
+ *Suppose that we wish to compress this picture slightly. Specifically, we wish 
+ *to remove one pixel from each of the m rows, so that the whole picture becomes 
+ *one pixel narrower. To avoid disturbing visual effects, however, we require 
+ *that the pixels removed in two adjacent rows be in the same or adjacent columns;
+ *the pixels removed form a “seam” from the top row to the bottom row where 
+ *successive pixels in the seam are adjacent vertically or diagonally.Suppose now 
+ *that along with each pixel A, we have calculated a real- valued disruption 
+ *measure d, indicating how disruptive it would be to remove pixel A. Int-
+ *uitively, the lower a pixel’s disruption measure, the more similar the pixel is 
+ *to its neighbors. Suppose further that we define the disruption measure of a seam
+ *to be the sum of the disruption measures of its pixels. Give an algorithm to find
+ *the lowest disruption measure possible for any given seam.
+ */
+
+template <int m, int n>
+class ImageCompression{
+public:
+	int image[m][n];
+	int shortestTolls[m][n][m][n];
+	
+	/*
+	Method tooled specifically for C++.
+    Due to C++'s lack of operator= when it comes
+    to arrays, this is required to make up for
+    the inability to directly transfer values.
+	*/
+	
+	void copyImage(int (&array)[m][n]){
+		for(int r = 0; r < m; r++){
+			for(int c = 0; c < n; c++){
+				image[r][c] = array[r][c];
+			}
+		}
+		
+		/*
+		This is a critical part of the main body of the 
+		algorithm. Think about it this way, a 1 to 1 c-
+		orrespondance exists between the image and a directed 
+		graph where traversing between "adjacent" positions is 
+		technically like an edge, and a position a node.
+		
+		The algorithm in particular is the all-sources 
+		shortest path algorithm.  The table below is constructed
+		to specifications to suit the purpose of the method.
+		
+		shortestTolls[w][l][h][t] denotes the least disruptive path 
+		that could exist fromn image[w][l] to image[h][t].
+		*/
+		
+		for(int w = 0; w < m; w++){
+		    for(int l = 0; l < n; l++){
+		        for(int h = 0; h < m; h++){
+		            for(int t = 0; t < n; t++){
+		                if(w == h && l == t){
+		                    shortestTolls[w][l][h][t] = image[h][t];
+		                }else shortestTolls[w][l][h][t] = 2147483647;
+		            }
+		        }
+		    }
+		}
+	}
+	
+	/* 
+	This algorithm is used to check the validity of the position
+	at a certain index. (Used to insure that there is no std::out_of_range exception)
+	*/
+	
+	bool isValidIndex(int r, int c){
+	    return r >= 0 && r < m && c >= 0 && c < n;
+	}
+	
+	/*
+	Substitution method: It is used to determine if the predecessor plus adding the weight
+	of that particular position is less than that of the current weight of the node. The 
+	lesser one will be chosen as the value of the node. This guarantees that after a number
+	of iterations, the weight of that particular node is always the least. 
+	*/
+	
+	void determineMinValue(int w, int l, int h, int t, int h2, int t2){
+	    if(isValidIndex(h, t)){
+	        if(shortestTolls[w][l][h][t] == 2147483647) return;
+		    int sum = shortestTolls[w][l][h][t] + image[h2][t2];
+		    
+		    bool b =  sum < shortestTolls[w][l][h2][t2];
+		    shortestTolls[w][l][h2][t2] = b ? sum : shortestTolls[w][l][h2][t2];
+		    
+		 }
+	}
+	
+	/*
+	The main body of the all sources shortest path algorithm. It is obvious that 
+	for each path, its length is guaranteed to be the height(m) of the 2D array. 
+	Thus, if we iterate through the shortestTolls array m times. The path would then
+	ultimately be determined.
+	*/
+	
+	void allSourcesShortestPath(){
+	    for(int k = 0; k < m; k++){
+	        for(int w = 0; w < m; w++){
+		        for(int l = 0; l < n; l++){
+		            for(int h = 0; h < m; h++){
+		                for(int t = 0; t < n; t++){
+		                    determineMinValue(w,l,h-1,t-1,h,t);
+		                    determineMinValue(w,l,h-1,t,h,t);
+		                    determineMinValue(w,l,h-1,t+1,h,t);
+		                }
+		            }
+		        }
+		    }
+        }
+	}
+	
+	/*
+	Body of initiating method. It calls respective methods that is
+	needed for later use. Precomputation step takes the majority of
+	the time (All sources shortest Path). Since by this point, the 
+	smallest disruption measure between any two positions are already
+	known. All we have to do is compare and then find the min value.
+	*/
+	
+	int minDisruptionSeam(int (&array)[m][n]){
+		copyImage(array);
+		allSourcesShortestPath();
+		int minDisruption = 2147483647;
+		for(int high = 0; high < n; high++){
+		    for(int low = 0; low < n; low++){
+		        if(shortestTolls[0][low][m-1][high] < minDisruption){
+		            minDisruption = shortestTolls[0][low][m-1][high]; 
+		        }
+		    }
+		}
+		return minDisruption + 1;
+	}
+	
+	/*
+	Summary: Given m and n are the height and length of the array 
+	respectively. The rough Big O time will be O(m^3 * n^2), which
+	is mostly compromised of the all sources shortest path algorithm.
+	It is possible to reduce the runtime to O(m^2 * n^2 * log m) time,
+	but details admittedly are still in the blueprints.
+	
+	Space usage will be O(m^2 * n^2). The size of the four dimensional
+	array used to store the disruption measures of the seams.
+	*/
+};
+
+int main(){
+	int array[6][5] = {
+	    {9,  6,  8,  4,  3},
+	    {6,  12, 11, 9,  8},
+	    {1,  3,  2,  8,  14},
+	    {10, 18, 12, 9,  12},
+	    {28, 13, 15, 9,  7},
+	    {6,  2,  1,  19, 3}
+	};
+	
+	ImageCompression<6,5> minSeam;
+	cout << minSeam.minDisruptionSeam(array);
+}
+
+
