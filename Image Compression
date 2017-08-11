@@ -107,17 +107,17 @@ public:
 	void allSourcesShortestPath(){
 	    for(int k = 0; k < m; k++){
 	        for(int w = 0; w < m; w++){
-		        for(int l = 0; l < n; l++){
-		            for(int h = 0; h < m; h++){
-		                for(int t = 0; t < n; t++){
+		    for(int l = 0; l < n; l++){
+		        for(int h = 0; h < m; h++){
+		            for(int t = 0; t < n; t++){
 		                    determineMinValue(w,l,h-1,t-1,h,t);
 		                    determineMinValue(w,l,h-1,t,h,t);
 		                    determineMinValue(w,l,h-1,t+1,h,t);
-		                }
 		            }
 		        }
 		    }
-        }
+		}
+       	    }
 	}
 	
 	/*
