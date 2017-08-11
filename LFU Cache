@@ -1,0 +1,162 @@
+/*LFU Cache*/
+#include <iostream>
+#include <map>
+#include <vector>
+
+using namespace std;
+
+//This is the superclass
+//It is used as the generic class
+//from which both the LFUNode and
+//Sentinel Node is defined
+
+class Node{
+    public:
+        int frequency;
+        
+        Node(int f):frequency(f){}
+};
+
+/*
+This class carries the data for the key and the value.
+It is used as the equivalent of std::pair in map.
+*/
+
+template <typename T, typename U>
+class LFUNode : Node{
+    public:
+        T key;
+        U value;
+        
+        LFUNode(T k, U val, int f):key(k),value(val), Node(f){
+        }
+};
+
+/* Sentinal Node is the carrier of the information
+for which nodes were used the most and the least.
+Each one of these nodes carry a frequency count, 
+which is used as a reference guide in the LFUCache
+class. 
+*/
+
+template <typename T, typename U>
+class SentinelNode : Node{
+    public:
+        
+        map<T, LFUNode<T,U>> nodes;
+        
+        SentinelNode(int f):Node(f){}
+        void addNode(LFUNode<T,U> node){
+            nodes.emplace(node.key, node);
+        }
+        void evictNode(T key){
+            nodes.erase(key);
+        }
+        LFUNode<T,U> getNode(T key){
+            auto it = nodes.find(key);
+            //Assuming type has zero value.
+            if(it == nodes.end()) return LFUNode<T,U>(T(), U(), 0);
+            else return it -> second;
+        }
+};
+
+/*
+LFUCache class.
+Description:
+Implements a map-like structure. However, has certain
+restrictions. When a certain specified maximum size is
+reached, the least frequently accessed element is 
+evicted. Sentinel nodes is used to keep a tab on frequncy.
+LFUNodes carry the data.
+*/
+
+template <typename T, typename U>
+class LFUCache{
+    public:
+        int maxSize;
+        int currSize;
+        
+        /*Access points: is used as a shortcut
+        to access sentinel nodes. The index represent
+        the frequency of that particular node. At 
+        the creation of a new LFUNode, its frequency
+        is set to 0 and then added to the head of the
+        list.
+        */
+        
+        vector<SentinelNode<T,U>> accessPoints;
+        
+        // Is used to keep track of node frequency
+        map<T, int> frequencies;
+        
+        LFUCache(int size):maxSize(size){}
+        
+        /*This is used to increase the length of the 
+        sentinel nodes. If the frequency count exceeds 
+        access points' length. Then we increase it by
+        one so we could accomadate the change.
+        */
+        void addFrequency(int frequency){
+            if(!(accessPoints.size() > frequency)){
+                SentinelNode<T,U> node = SentinelNode<T,U>(frequency);
+                accessPoints.emplace_back(node);
+            }        
+        }
+        
+        //Put method, but with standard LFUCache restrictions
+        //taken into account.
+        
+        void put(T key, U value){
+            currSize++;
+            if(currSize == maxSize + 1){
+                int index = 0;
+                while(accessPoints.at(index).nodes.size() == 0) index++;
+                remove(accessPoints.at(index).nodes.begin() -> second.key);
+            }
+            LFUNode<T,U> node = LFUNode<T,U>(key, value, 0);
+            addFrequency(0);
+            frequencies.emplace(key, 0);
+            accessPoints.at(0).addNode(node);
+        }
+        
+        //Standard get method, but with 
+        //access count increase to keep track
+        //of usages and purposes of eviction.
+        
+        U get(T key){
+            auto it = frequencies.find(key);
+            if(it == frequencies.end()) return U();
+            addFrequency(it -> second + 1);
+            LFUNode<T,U> node = accessPoints.at(it -> second).getNode(key);
+            accessPoints.at(it -> second).evictNode(key);
+            accessPoints.at(it -> second + 1).addNode(node);
+            it -> second += 1;
+            return node.value;
+        }
+        
+        /*
+        Remove method.
+        */
+        
+        bool remove(T key){
+            auto it = frequencies.find(key);
+            if(it == frequencies.end()) return false;
+            LFUNode<T,U> node =  accessPoints.at(it -> second).nodes.begin() -> second;
+            accessPoints.at(it -> second).evictNode(node.key);
+            frequencies.erase(key);
+            currSize--;
+            return true;
+        }
+};
+
+int main(){
+    LFUCache<int,int> cache = LFUCache<int,int>(4);
+    cache.put(1,4);
+    cache.put(2,6);
+    cache.put(3,9);
+    cache.put(4,12);
+    cout << cache.get(3) << endl;
+    cout << "Testing eviction differentiation" << endl;
+    cache.put(5, 15);
+    cout << cache.get(1);
+}
