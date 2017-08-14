@@ -1,0 +1,146 @@
+import scala.collection.mutable.HashMap;
+import scala.Array;
+
+object Test{
+    /*
+    Find the longest palindromic subsequence of a string.
+    Example:
+        Input: character
+        Output: carac
+    */
+    class IndexPair(_left:Int, _right:Int, _char:Char){
+        var left = _left
+        var right = _right
+        var char = _char
+    }
+    
+    class PairCapacity(_pair:IndexPair, _innerPairs:Array[PairCapacity])
+            extends Ordered[PairCapacity]{
+        var pair = _pair
+        var innerPairs = _innerPairs
+        def compare(that:PairCapacity):Int = innerPairs.length - that.innerPairs.length
+        def equals(that:PairCapacity):Boolean={
+            return that.pair.left == this.pair.left &&
+                    that.pair.right == this.pair.right &&
+                    that.pair.char == this.pair.char;
+        }
+        def within(that:PairCapacity):Boolean={
+            return that.pair.left > this.pair.left &&
+                that.pair.right < this.pair.right;
+        }
+    }
+    
+    class LongestPalindromicSubsequence(string:String){
+        var bestOrder:Array[PairCapacity] = 
+            new Array(0);
+        
+        def determinePairs(l:Int, r:Int):Array[PairCapacity] = {
+            var list:Array[IndexPair] = new Array(0);
+            for(left <- 0 until l){
+                for(right <- r+1 until string.length()){
+                    if(string.charAt(left) == string.charAt(right)){
+                        var pair:IndexPair = 
+                            new IndexPair(left, right, string.charAt(left));
+                        list :+= pair;
+                    }
+                }
+            }
+            var precedenceList:Array[PairCapacity] = 
+                new Array(0);
+            for(pair <- list){
+                var capacityList:Array[PairCapacity] = new Array(0);
+                var pairCapacity:PairCapacity = 
+                    new PairCapacity(pair, capacityList);
+                precedenceList :+= pairCapacity;
+            }
+            for(pair <- precedenceList){
+                for(pair2 <- precedenceList){
+                    if(!pair.equals(pair2) && pair.within(pair2)){
+                        pair.innerPairs :+= pair2;
+                    } 
+                }
+                pair.innerPairs = pair.innerPairs.sorted
+            }
+            return precedenceList.sorted;
+        }
+        
+        def bestCapacityArrangement(pairs:Array[PairCapacity], pair:PairCapacity){
+            val newPairs = pairs :+ pair; 
+            if(newPairs.length > bestOrder.length) bestOrder = newPairs.clone();
+            if(bestOrder.length >= pair.innerPairs.length + newPairs.length){
+                return;
+            } 
+            for(currPair <- pair.innerPairs){
+                bestCapacityArrangement(newPairs, currPair);
+                newPairs.drop(newPairs.length - 1);
+            }
+        }
+        
+        def bestCapacityArrangement(pairs:Array[PairCapacity]){
+            var count:Int = 0;
+            for(i <- pairs.length - 1 to 0 by -1){
+                var capacities:Array[PairCapacity] = new Array(0);
+                var length:Int = pairs.apply(i).innerPairs.length + 1;
+                if(bestOrder.length < length){
+                    bestCapacityArrangement(capacities, pairs.apply(i));
+                }else{
+                   return;
+                }
+            }
+        }
+        
+        def findMaxCapacity(left:Int, right:Int):Array[PairCapacity]={
+            var pairs:Array[PairCapacity] = determinePairs(left, right);
+            if(pairs.length == 0) return pairs;
+            bestCapacityArrangement(pairs);
+            var bestArrangement = bestOrder.clone();
+            bestOrder = new Array(0);
+            return bestArrangement;
+        }
+        
+        def findLongestString():String={
+            var bestLength:Int = 0;
+            var centerIndex1:Int = 0;
+            var centerIndex2:Int = 0;
+            var bestArrangement:Array[PairCapacity] = new Array(0);
+            for(i <- 0 until string.length){
+                var barrier:Boolean = true;
+                for(i2 <- i until string.length){
+                    if(string.charAt(i) == string.charAt(i2) && barrier){
+                        var arrangement = findMaxCapacity(i, i2);
+                        if(i2 != i) barrier = false;
+                        var currLength:Int = 0;
+                        if(i2 == i) currLength = arrangement.length * 2 + 1;
+                        else currLength = arrangement.length * 2 + 2;
+                        if(currLength > bestLength){
+                            bestArrangement = arrangement.clone();
+                            bestLength = currLength;
+                            centerIndex1 = i;
+                            centerIndex2 = i2;
+                        }
+                    }
+                }
+            }
+            var result:String = "";
+            if(centerIndex1 == centerIndex2){
+                result = result + string.charAt(centerIndex1);
+            }else{
+                result = result + string.charAt(centerIndex1) 
+                    + string.charAt(centerIndex2);
+            }
+            if(bestArrangement.length == 0) return result;
+            for(i <- bestArrangement.length - 1 to 0 by -1){
+                val (fst, snd) = result.splitAt(0);
+                result = bestArrangement.apply(i).pair.char + snd;
+                result = result + bestArrangement.apply(i).pair.char;
+            }
+            return result;
+        }
+    }
+    def main(args: Array[String]) ={
+        var palindrome:LongestPalindromicSubsequence = 
+            new LongestPalindromicSubsequence("character");
+        val result = palindrome.findLongestString();
+        println(result);
+    } 
+}
