@@ -1,0 +1,114 @@
+/*
+Given a list of words, find the longest word that could be composed from other words in the list.
+
+Example:
+
+Input: nana, dog, ba, dogwalker, banana, walker, walk
+Output: dogwalker
+*/
+import scala.collection.mutable.HashMap;
+
+object Test {
+    
+    class TrieNode(c:Char){
+        def character = c
+        var map:HashMap[Char, TrieNode] =  new HashMap[Char, TrieNode]();
+        
+        def addNode(s:String, index:Int){
+            if(index >= s.length) return;
+            if(!map.contains(s.charAt(index))){
+                map += s.charAt(index) -> new TrieNode(s.charAt(index));
+            }
+            map.apply(s.charAt(index)).addNode(s, index + 1);
+        }
+        def addNode(s:String){
+            this.addNode(s, 0);
+        }
+        
+        def containsString(s:String, index:Int):Boolean = {
+            if(index >= s.length) return true;
+            if(!map.contains(s.charAt(index))) return false;
+            else return map.apply(s.charAt(index)).containsString(s, index + 1);
+        }
+        def containsString(s:String):Boolean = {
+            return containsString(s, 0);
+        }
+    }
+    
+    class Trie{
+        var root:TrieNode = new TrieNode(' ');
+        
+        def addString(s:String){
+            root.addNode(s);
+        }
+        def containsString(s:String):Boolean = {
+            return root.containsString(s);
+        }
+    }
+    
+    class StringTuple(str:String) 
+        extends Ordered[StringTuple]{
+        def string = str
+        def length = str.length
+        @Override
+        def compare(that:StringTuple):Int = this.length - that.length;
+    }
+    
+    class LongestWord(strs:Array[String]){
+        
+        def dict:Array[StringTuple] = {
+            val result:Array[StringTuple] = new Array[StringTuple](strs.length);
+            for(i <- 0 until strs.length){
+                var tuple:StringTuple = new StringTuple(strs.apply(i));
+                result.update(i, tuple);
+            }
+            return result.sorted;
+        }
+        val lengthSortedStrings = this.dict
+        
+        def trieMap:HashMap[Int, Trie] = {
+            var currentLength:Int = -1;
+            var result:HashMap[Int, Trie] = new HashMap[Int, Trie]();
+            for(i <- 0 until lengthSortedStrings.length){
+                var t = lengthSortedStrings.apply(i);
+                if(t.length != currentLength){
+                    var trie:Trie = new Trie;
+                    result += t.length -> trie;
+                    currentLength = t.length;
+                }
+                result.apply(currentLength).addString(t.string);
+            }
+            return result;
+        }
+        var map:HashMap[Int, Trie] = this.trieMap;
+        
+        def isValidWord(s:String, start:Int, end:Int):Boolean = {
+            if(end == s.length) return false;
+            if(end - start == s.length - 1) return false;
+            val length:Int = end - start + 1;
+            var result:Boolean = false;
+            if(map.contains(length)){
+                var validWord:Boolean = 
+                    map.apply(length).containsString(s.substring(start, end + 1));
+                if(validWord && end == s.length - 1) return true; 
+                result = isValidWord(s, end + 1, end + 1);
+            }
+            return (result || isValidWord(s, start, end + 1));
+        }
+        
+        def longestWord:String = {
+            for(i <- strs.length - 1 to 0 by -1){
+                if(isValidWord(lengthSortedStrings.apply(i).string, 0, 0)){
+                    return lengthSortedStrings.apply(i).string;
+                }
+            }
+            return "";
+        }
+    }
+    def main(args: Array[String]) = {
+        val strs:Array[String] = Array("dog","walker","walk","nana","banana","ban","dogwalker");
+        var words:LongestWord = new LongestWord(strs);
+        println(words.longestWord);
+    }
+}
+
