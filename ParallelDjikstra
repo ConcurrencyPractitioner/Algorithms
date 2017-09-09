@@ -1,0 +1,105 @@
+package parallelpractice;
+
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
+import java.util.concurrent.Executors;
+
+public class ParallelDjikstra<K>{
+	static class WeightedNode<K>{
+		int id;
+		K value;
+		HashMap<Integer, Integer> weights;
+		HashMap<Integer, WeightedNode<K>> nodes;
+		public WeightedNode(int id, K value){
+			this.id = id;
+			this.value = value;
+			this.weights = new HashMap<Integer, Integer>();
+			this.nodes = new HashMap<Integer, WeightedNode<K>>();
+		}
+	}
+	static class DjikstraRunnable<K> implements Runnable{
+		WeightedNode<K> source;
+		WeightedNode<K> current;
+		AtomicInteger[][] reference;
+		ThreadPoolExecutor executor;
+		public DjikstraRunnable(WeightedNode<K> source, 
+				WeightedNode<K> current,
+				ThreadPoolExecutor executor,
+				AtomicInteger[][] reference){
+			this.source = source;
+			this.current = current;
+			this.executor = executor;
+			this.reference = reference;
+		}
+		@Override
+		public void run(){
+			for(int i: current.nodes.keySet()){
+				System.out.println(reference[source.id][current.id]);
+				System.out.println(current.weights.get(i));
+				int sum = reference[source.id][current.id].get() + current.weights.get(i);
+				int currentValue = reference[source.id][current.nodes.get(i).id].get();
+				while(currentValue > sum){
+					currentValue = reference[source.id][current.nodes.get(i).id].get();
+					boolean changed = 
+							reference[source.id][current.nodes.get(i).id].compareAndSet(currentValue, sum);
+					if(changed){
+						DjikstraRunnable<K> newRunnable = new DjikstraRunnable<K>(this.source, 
+								current.nodes.get(i), 
+								this.executor,
+								this.reference);
+						executor.execute(newRunnable);
+						break;
+					}
+				}
+			}
+		}
+	}
+	static <K> int[][] parallelDjikstra(WeightedNode<K> node1, int nodeSize){
+		AtomicInteger[][] reference = new AtomicInteger[nodeSize][nodeSize];
+		for(int i = 0; i < nodeSize; i++){
+			for(int j = 0; j < nodeSize; j++){
+				reference[i][j] =
+						i == j ? new AtomicInteger(0) : new AtomicInteger(Integer.MAX_VALUE);
+			}
+		}
+		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		executor.execute(new DjikstraRunnable<K>(node1, node1, executor, reference));
+		while(executor.getActiveCount() > 0){
+			try {
+				Thread.sleep(0);
+			} catch (InterruptedException e) {}
+		}
+		executor.shutdown();
+		int[][] result = new int[nodeSize][nodeSize];
+		for(int i = 0; i < nodeSize; i++){
+			for(int j = 0; j < nodeSize; j++){
+				result[i][j] = reference[i][j].get();
+			}
+		}
+		return result;
+	}
+	@SuppressWarnings("unused")
+	public static void main (String[] args) throws java.lang.Exception{
+		WeightedNode<Integer> node1 = new WeightedNode<Integer>(0, 12);
+		WeightedNode<Integer> node2 = new WeightedNode<Integer>(1, 16);
+		WeightedNode<Integer> node3 = new WeightedNode<Integer>(2, 20);
+		WeightedNode<Integer> node4 = new WeightedNode<Integer>(3, 24);
+		WeightedNode<Integer> node5 = new WeightedNode<Integer>(4, 29);
+		WeightedNode<Integer> node6 = new WeightedNode<Integer>(5, 33);
+		WeightedNode<Integer> node7 = new WeightedNode<Integer>(6, 39);
+		WeightedNode<Integer> node8 = new WeightedNode<Integer>(7, 47);
+		WeightedNode<Integer> node9 = new WeightedNode<Integer>(8, 103);
+		node1.nodes.put(1, node2);
+		node1.weights.put(1,1);
+		node2.nodes.put(2, node3);
+		node2.weights.put(2,2);
+		int result[][] = parallelDjikstra(node1, 3);
+		for(int i = 0; i < 3; i++){
+			for(int j = 0; j < 3; j++){
+				System.out.println(i + " " + j + " " + result[i][j]);
+			}
+		}
+	}
+}
+
