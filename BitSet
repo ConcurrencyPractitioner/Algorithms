@@ -1,0 +1,19 @@
+#define len 16130
+
+struct BitSet{
+    long long bitTable[len];
+    BitSet() {}
+    void visited(int i) {
+        int rem = i % 62;
+        int index = (i - rem) / 62;
+        bitTable[index] += 1 << rem;
+    }
+    void clear() {
+        for (int i = 0; i < len; i++) bitTable[i] = 0;
+    }
+    bool hasVisited(int i) {
+        int rem = i % 62;
+        int index = (i - rem) / 62;
+        return (bitTable[index] >> rem) % 2 == 1;
+    }
+};
